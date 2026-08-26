@@ -1,5 +1,11 @@
 # Lyra OS
 
+> [!WARNING]
+> Este repositório inicia o flavor KDE experimental do Lyra OS. Sua árvore
+> ainda preserva o histórico da edição GNOME usada como base e não representa
+> uma imagem KDE funcional. A primeira Alpha será reduzida à pilha KDE da base,
+> sem pacotes próprios do Lyra.
+
 Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16,
 voltada a uma experiência GNOME simples, estável e integrada ao ecossistema
 Lyra. Este repositório contém a descrição KIWI usada para gerar a ISO live e
