@@ -563,16 +563,16 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   IMAGE_WALLPAPER_DIR="$BUILD_DIR/build/image-root/usr/share/backgrounds/lyra"
   IMAGE_GNOME_DEFAULTS="$BUILD_DIR/build/image-root/usr/share/glib-2.0/schemas/zz-lyra-desktop-wallpaper.gschema.override"
   IMAGE_GTK4_DEFAULT="$BUILD_DIR/build/image-root/etc/skel/.config/gtk-4.0/gtk.css"
-  if [ ! -s "$IMAGE_WALLPAPER_DIR/lyra-dawn.png" ]; then
+  if [ ! -s "$IMAGE_WALLPAPER_DIR/2702-dawn.png" ]; then
     echo "!!! built image is missing the default Lyra OS - Dawn wallpaper asset:" >&2
-    echo "  $IMAGE_WALLPAPER_DIR/lyra-dawn.png" >&2
+    echo "  $IMAGE_WALLPAPER_DIR/2702-dawn.png" >&2
     exit 1
   fi
   if ! grep -Fx \
-      "picture-uri='file:///usr/share/backgrounds/lyra/lyra-dawn.png'" \
+      "picture-uri='file:///usr/share/backgrounds/lyra/2702-dawn.png'" \
       "$IMAGE_GNOME_DEFAULTS" >/dev/null ||
      ! grep -Fx \
-      "picture-uri-dark='file:///usr/share/backgrounds/lyra/lyra-dawn.png'" \
+      "picture-uri-dark='file:///usr/share/backgrounds/lyra/2702-dawn.png'" \
       "$IMAGE_GNOME_DEFAULTS" >/dev/null; then
     echo "!!! built image does not use Lyra OS - Dawn as the default GNOME wallpaper" >&2
     exit 1

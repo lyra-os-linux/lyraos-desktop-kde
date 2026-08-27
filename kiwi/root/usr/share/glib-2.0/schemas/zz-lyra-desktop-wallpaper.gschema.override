@@ -6,5 +6,5 @@ gtk-theme='Lyra-OS'
 color-scheme='prefer-dark'
 
 [org.gnome.desktop.background]
-picture-uri='file:///usr/share/backgrounds/lyra/lyra-dawn.png'
-picture-uri-dark='file:///usr/share/backgrounds/lyra/lyra-dawn.png'
+picture-uri='file:///usr/share/backgrounds/lyra/2702-dawn.png'
+picture-uri-dark='file:///usr/share/backgrounds/lyra/2702-dawn.png'

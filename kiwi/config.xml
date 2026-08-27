@@ -568,6 +568,7 @@
     -->
     <package name="lyra-os-theme"/>
     <package name="lyra-os-icons"/>
+    <package name="lyra-os-wallpapers"/>
     <package name="fastfetch"/>
 
     <!--
