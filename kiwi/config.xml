@@ -293,43 +293,22 @@
          initrd and caused the boot regression at "Loading initial ramdisk". -->
     <package name="plymouth"/>
 
-    <!--
-      Bluetooth. Not pulled in by gnome_basic/gnome's Requires chain under
-      onlyRequired - confirmed missing on a real installed image (rpm -q
-      bluez: "package bluez is not installed"), which is why Bluetooth
-      never turned on. bluez is the actual stack/daemon (bluetooth.service,
-      enabled in config.sh); gnome-bluetooth is GNOME Settings' Bluetooth
-      panel integration (libgnome-bluetooth itself already arrives
-      transitively, but not this package); bluez-firmware covers common
-      built-in adapters that need a firmware upload before they work.
-    -->
+    <!-- Bluetooth stack, firmware and Plasma integration. -->
     <package name="bluez"/>
     <package name="bluez-firmware"/>
-    <package name="gnome-bluetooth"/>
+    <package name="bluedevil6"/>
 
-    <!--
-      GStreamer plugins for GNOME Shell's built-in screen recorder
-      (Ctrl+Shift+Alt+R) - it encodes to VP8/WebM via gstreamer's vp8enc,
-      which lives in gstreamer-plugins-good, not gstreamer-plugins-base
-      (already present transitively). Without it, screenshots work
-      (a separate, non-GStreamer code path) but recording silently fails.
-      Confirmed missing on a real installed image the same way as bluez
-      above.
-    -->
+    <!-- Common GStreamer codecs used by desktop multimedia applications. -->
     <package name="gstreamer-plugins-good"/>
 
     <!-- The Rust installer's privileged service is authorized separately;
          the graphical process continues to run as liveuser. -->
     <package name="polkit"/>
 
-    <!--
-      GNOME desktop. gnome_basic+gnome's Requires chain brings in GDM,
-      GNOME Session, Seahorse, accessibility infrastructure and base fonts.
-      Important desktop integration packages which are only Recommends in
-      Leap are explicit below because this image uses onlyRequired.
-    -->
-    <namedCollection name="gnome_basic"/>
-    <namedCollection name="gnome"/>
+    <!-- Plasma 6 desktop base. Desktop integrations that are only
+         recommendations remain explicit because the image uses
+         onlyRequired. -->
+    <namedCollection name="kde_plasma"/>
     <!-- WebKitGTK does not synthesize flag glyphs from the base DejaVu fonts.
          Keep Noto Color Emoji explicit because the installer language picker
          uses regional-indicator emoji for its language flags. -->
@@ -341,50 +320,32 @@
     <package name="liberation-fonts"/>
     <package name="google-carlito-fonts"/>
     <package name="google-noto-sans-cjk-fonts"/>
-    <!-- GNOME Shell obtains battery presence, charge and AC state through
-         UPower. It is only a recommendation in the minimal Leap dependency
-         graph, so onlyRequired omitted the daemon while retaining its client
-         library; the result was a working BAT1 in sysfs but no battery icon. -->
+    <!-- Plasma obtains battery state through UPower. -->
     <package name="upower"/>
-    <package name="nautilus"/>
-    <!-- Nautilus only Recommends gvfs. Without these explicit packages,
-         trash, removable media, phones and network locations are missing. -->
-    <package name="gvfs"/>
-    <package name="gvfs-backends"/>
-    <package name="gvfs-fuse"/>
+    <package name="dolphin"/>
+    <package name="dolphin-plugins"/>
+    <package name="kio-extras"/>
     <package name="udisks2"/>
-    <package name="gnome-keyring-pam"/>
+    <package name="kwalletd6"/>
+    <package name="kwalletmanager"/>
     <package name="polkit-default-privs"/>
-    <package name="xdg-user-dirs-gtk"/>
-    <!-- Required for Flatpak file pickers, screenshots and other desktop
-         portals; GNOME only recommends it through the full pattern set. -->
-    <package name="xdg-desktop-portal-gnome"/>
+    <package name="polkit-kde-agent-6"/>
+    <package name="xdg-desktop-portal-kde6"/>
+    <package name="plasma6-nm"/>
+    <package name="plasma6-pa"/>
+    <package name="plasma6-firewall"/>
+    <package name="sddm-qt6"/>
+    <package name="sddm-greeter-qt6"/>
 
     <!--
-      Curated app set (checklist: "manter o essencial: Arquivos, Textos,
-      Configuracoes, Camera, etc." + explicit spec requirements). Picked
-      by reading patterns-gnome.spec's actual Recommends lists on OBS
-      and choosing what earns a place, not by trimming everything down
-      to the bare Requires chain above and stopping there.
-
-      Deliberately NOT included (redundant/rare/onboarding-flavored,
-      confirmed present as Recommends in patterns-gnome.spec so they'd
-      otherwise sneak in under plusRecommended): gnome-maps,
-      gnome-weather, gnome-contacts, evolution(-ews), pidgin, planner,
-      remmina, vinagre, gnome-music, totem, gnome-initial-setup,
-      opensuse-welcome-launcher (this last pair specifically because the
-      spec rules out any first-boot onboarding).
+      Curated Plasma application set: settings, files, text editing, camera,
+      terminal and the essential maintenance utilities. The full KDE PIM
+      suite and Plasma Welcome are intentionally omitted.
     -->
-    <package name="gnome-control-center"/>
-    <package name="gnome-text-editor"/>
-    <!-- Cheese was renamed/rewritten upstream; there is no "cheese" RPM
-         in Leap 16 - verified against the real repodata. -->
-    <package name="snapshot"/>
-    <!-- GNOME Terminal remains the default, while the newer GNOME Console is
-         also available as a deliberately selected alternative. GNOME 48's
-         terminal gsettings schema already names gnome-terminal by default. -->
-    <package name="gnome-terminal"/>
-    <package name="gnome-console"/>
+    <package name="systemsettings6"/>
+    <package name="kate"/>
+    <package name="kamoso"/>
+    <package name="konsole"/>
     <!-- Fish is the interactive shell of the Lyra OS Desktop: the installer
          creates the user account with /usr/bin/fish (DEFAULT_DESKTOP_SHELL in
          installer/src/service/operations/deploy.rs) and liveuser above is
@@ -413,16 +374,14 @@
     <!-- Shown once per installed user through its guarded XDG autostart.
          The launcher explicitly skips the liveuser installation session. -->
     <package name="lyra-welcome"/>
-    <package name="gnome-calculator"/>
-    <package name="gnome-characters"/>
-    <package name="gnome-disk-utility"/>
-    <!-- gnome-papers isn't packaged for Leap 16 yet - evince is what's
-         actually in the repo, also verified. -->
-    <package name="evince"/>
-    <package name="loupe"/>
-    <package name="baobab"/>
-    <package name="gnome-logs"/>
-    <package name="gnome-tweaks"/>
+    <package name="kcalc"/>
+    <package name="partitionmanager"/>
+    <package name="okular"/>
+    <package name="gwenview"/>
+    <package name="filelight"/>
+    <package name="plasma6-systemmonitor"/>
+    <package name="spectacle"/>
+    <package name="ark"/>
     <!-- Accessibility - kept deliberately; curation is about redundant
          apps, not accessibility tooling. -->
     <package name="orca"/>
@@ -458,8 +417,7 @@
     <package name="libreoffice-impress"/>
     <package name="libreoffice-math"/>
     <package name="libreoffice-writer"/>
-    <package name="libreoffice-gnome"/>
-    <package name="libreoffice-gtk3"/>
+    <package name="libreoffice-qt6"/>
     <package name="libreoffice-l10n-en"/>
     <package name="libreoffice-l10n-pt_BR"/>
     <package name="libreoffice-l10n-es"/>
@@ -488,11 +446,11 @@
     <!-- CUPS + common drivers, printing and scanning. -->
     <package name="cups"/>
     <package name="cups-filters"/>
-    <package name="system-config-printer"/>
+    <package name="plasma6-print-manager"/>
     <package name="gutenprint"/>
     <package name="sane-backends"/>
     <package name="sane-airscan"/>
-    <package name="simple-scan"/>
+    <package name="skanpage"/>
 
     <!--
       Flatpak itself; the Flathub remote is registered at build time in
@@ -502,24 +460,14 @@
     <package name="flatpak"/>
 
     <!--
-      Vega (GTK4 frontend). Package name confirmed against
-      home:rodrigosbrito:vega's real OBS package list (vega-gtk,
-      alongside vega-cli/vegad which aren't pulled in explicitly - RPM
-      deps will bring in whatever vega-gtk actually needs).
+      Vega Qt frontend. Its RPM dependencies bring in the daemon and the
+      required Qt/Kirigami runtime components.
     -->
-    <package name="vega-gtk"/>
+    <package name="vega-qt"/>
 
-    <!-- Lyra's native remote-access clients, pinned in the default GNOME
-         favorites together with Vega and Firefox. -->
+    <!-- Lyra's native remote-access clients. -->
     <package name="beam"/>
     <package name="sulafat"/>
-
-    <!--
-      Sheliak, Lyra's GNOME 48 dock. Installing a system extension alone
-      does not enable it for users, so the image also ships a GNOME Shell
-      schema override under root/usr/share/glib-2.0/schemas/.
-    -->
-    <package name="sheliak"/>
 
     <!-- Fina, from the dedicated home:rodrigosbrito:fina OBS repository. -->
     <package name="fina"/>
@@ -572,65 +520,54 @@
     <package name="fastfetch"/>
 
     <!--
-      Translations: Leap packages ship UI strings in a separate
-      "<name>-lang" subpackage, pulled in only as a Recommends - which
-      onlyRequired (see above) drops just like everything else, so the
-      built image ends up with the configured locale set (<locale> above)
-      but almost every GNOME app and gnome-shell itself still in English.
-      This list was cross-checked against a running reference image
-      (`rpm -qa`/`zypper se '*-lang'`) for the desktop-facing packages
-      above and the gnome_basic/gnome pattern's GDM/GNOME Session/Seahorse/
-      accessibility Requires chain; backend-only libraries with no
-      user-visible strings (gstreamer, tracker/localsearch, wireplumber,
-      etc.) are deliberately left out.
+      Translations: Leap packages ship UI strings in separate
+      "<name>-lang" subpackages, pulled in only as Recommends. Keep the
+      language packages for the explicitly selected Plasma applications
+      because this image uses onlyRequired.
     -->
     <package name="accountsservice-lang"/>
-    <package name="appstream-glib-lang"/>
     <package name="AppStream-lang"/>
+    <package name="ark-lang"/>
     <package name="at-spi2-core-lang"/>
-    <package name="baobab-lang"/>
-    <package name="evince-lang"/>
+    <package name="bluedevil6-lang"/>
+    <package name="dolphin-part-lang"/>
+    <package name="dolphin-plugins-lang"/>
+    <package name="filelight-lang"/>
     <package name="firewalld-lang"/>
     <package name="fontconfig-lang"/>
-    <package name="gdm-lang"/>
-    <package name="glib-networking-lang"/>
-    <package name="gnome-calculator-lang"/>
-    <package name="gnome-characters-lang"/>
-    <package name="gnome-console-lang"/>
-    <package name="gnome-control-center-lang"/>
-    <package name="gnome-disk-utility-lang"/>
-    <package name="gnome-keyring-lang"/>
-    <package name="gnome-logs-lang"/>
-    <package name="gnome-session-lang"/>
-    <package name="gnome-settings-daemon-lang"/>
-    <package name="gnome-shell-lang"/>
-    <package name="gnome-terminal-lang"/>
-    <package name="gnome-text-editor-lang"/>
-    <package name="gnome-tweaks-lang"/>
-    <package name="gnome-user-share-lang"/>
-    <package name="gsettings-desktop-schemas-lang"/>
-    <package name="gvfs-lang"/>
-    <package name="loupe-lang"/>
-    <package name="malcontent-lang"/>
-    <package name="vlc-lang"/>
-    <package name="mutter-lang"/>
-    <package name="nautilus-lang"/>
+    <package name="gwenview-lang"/>
+    <package name="kamoso-lang"/>
+    <package name="kate-lang"/>
+    <package name="kcalc-lang"/>
+    <package name="kde-cli-tools6-lang"/>
+    <package name="kio-extras-lang"/>
+    <package name="konsole-part-lang"/>
+    <package name="kwalletd6-lang"/>
+    <package name="kwalletmanager-lang"/>
+    <package name="kwin6-lang"/>
     <package name="NetworkManager-lang"/>
+    <package name="okular-lang"/>
     <package name="orca-lang"/>
-    <package name="PackageKit-lang"/>
+    <package name="partitionmanager-lang"/>
     <package name="pipewire-lang"/>
+    <package name="plasma6-desktop-lang"/>
+    <package name="plasma6-firewall-lang"/>
+    <package name="plasma6-nm-lang"/>
+    <package name="plasma6-pa-lang"/>
+    <package name="plasma6-print-manager-lang"/>
+    <package name="plasma6-systemmonitor-lang"/>
+    <package name="plasma6-workspace-lang"/>
     <package name="plymouth-lang"/>
-    <package name="seahorse-lang"/>
+    <package name="polkit-kde-agent-6-lang"/>
     <package name="shared-mime-info-lang"/>
-    <package name="simple-scan-lang"/>
-    <package name="snapshot-lang"/>
-    <package name="system-config-printer-common-lang"/>
-    <package name="tecla-keyboard-layout-viewer-lang"/>
+    <package name="skanpage-lang"/>
+    <package name="spectacle-lang"/>
+    <package name="systemsettings6-lang"/>
     <package name="udisks2-lang"/>
+    <package name="vlc-lang"/>
     <package name="xdg-desktop-portal-lang"/>
-    <package name="xdg-desktop-portal-gnome-lang"/>
+    <package name="xdg-desktop-portal-kde6-lang"/>
     <package name="xdg-user-dirs-lang"/>
-    <package name="xdg-user-dirs-gtk-lang"/>
     <package name="xkeyboard-config-lang"/>
   </packages>
 
