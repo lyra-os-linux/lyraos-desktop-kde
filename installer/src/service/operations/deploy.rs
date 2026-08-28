@@ -31,8 +31,14 @@ const INSTALLED_THIRD_PARTY_PRIORITY: u8 = 90;
 
 /// Files that only make sense in the autologin live session.
 const LIVE_ONLY_ARTIFACTS: &[&str] = &[
-    "etc/gdm/custom.conf",
+    "etc/sddm.conf.d/10-lyra-live.conf",
+    "etc/sddm.conf",
+    "etc/pam.d/common-auth-lyra-live",
+    "etc/pam.d/sddm",
+    "etc/pam.d/sddm-autologin",
     "etc/xdg/autostart/lyra-installer-autostart.desktop",
+    "etc/xdg/autostart/lyra-plasma-initialize.desktop",
+    "usr/libexec/lyra-live-plasma-start",
     "usr/bin/lyra-live-smoke",
     // liveuser's passwordless sudo (kiwi/config.sh) - must never survive
     // onto the installed system, which gets its own sudo user with a real
@@ -44,7 +50,7 @@ const LIVE_ONLY_ARTIFACTS: &[&str] = &[
 const ENABLED_SERVICES: &[&str] = &[
     "NetworkManager.service",
     "firewalld.service",
-    "gdm.service",
+    "sddm.service",
     "cups.service",
 ];
 
@@ -393,21 +399,8 @@ impl PrivilegedOperation for WriteLocale {
 ///   since it happens to also be a valid console keymap for most of
 ///   [`KEYBOARD_LAYOUTS`]'s Latin-script entries), covers TTY access only
 ///   (Ctrl+Alt+F3), unrelated to the desktop session.
-/// - a GNOME systemwide `dconf` default for
-///   `org.gnome.desktop.input-sources` — the mechanism that actually
-///   controls the real GNOME/Wayland desktop session (GNOME 48+ here is
-///   Wayland by default). The previous version instead wrote
-///   `/etc/X11/xorg.conf.d/00-keyboard.conf`, which is Xorg-server-only
-///   config: no Xorg process runs under a Wayland session at all, so that
-///   file had zero effect on the actual desktop keyboard layout unless a
-///   user manually picked a "GNOME on Xorg" fallback session at the GDM
-///   login screen. Confirmed via GNOME's own dconf system-administrator
-///   docs (wiki.gnome.org/Projects/dconf/SystemAdministrators): a
-///   `/etc/dconf/profile/user` naming the `local` system database, plus a
-///   keyfile under `/etc/dconf/db/local.d/`, plus `dconf update` to
-///   compile the binary database. No lock file — the point is a *default*,
-///   not enforcement; the installed user can still change it later in
-///   Settings.
+/// Plasma reads the system XKB defaults written to `/etc/default/keyboard`.
+/// The setting remains a default and users can change it in System Settings.
 struct WriteKeyboard {
     target_root: PathBuf,
     keyboard_layout: String,
@@ -418,7 +411,7 @@ impl PrivilegedOperation for WriteKeyboard {
         "configurar layout de teclado".to_string()
     }
 
-    fn perform(&self, executor: &dyn Executor) -> Result<(), OperationError> {
+    fn perform(&self, _executor: &dyn Executor) -> Result<(), OperationError> {
         let (_, xkb_layout, xkb_variant) = crate::KEYBOARD_LAYOUTS
             .iter()
             .find(|(id, ..)| *id == self.keyboard_layout)
@@ -452,34 +445,6 @@ impl PrivilegedOperation for WriteKeyboard {
             .map_err(io_error)?;
         }
 
-        let dconf_profile_dir = etc.join("dconf/profile");
-        fs::create_dir_all(&dconf_profile_dir).map_err(io_error)?;
-        fs::write(
-            dconf_profile_dir.join("user"),
-            "user-db:user\nsystem-db:local\n",
-        )
-        .map_err(io_error)?;
-
-        let dconf_db_dir = etc.join("dconf/db/local.d");
-        fs::create_dir_all(&dconf_db_dir).map_err(io_error)?;
-        let xkb_source = match xkb_variant {
-            Some(variant) => format!("{xkb_layout}+{variant}"),
-            None => xkb_layout.to_string(),
-        };
-        fs::write(
-            dconf_db_dir.join("00-keyboard"),
-            format!("[org/gnome/desktop/input-sources]\nsources=[('xkb', '{xkb_source}')]\n"),
-        )
-        .map_err(io_error)?;
-
-        executor.run(&ArgvCommand {
-            binary: "chroot".to_string(),
-            args: vec![
-                path_str(&self.target_root),
-                "dconf".to_string(),
-                "update".to_string(),
-            ],
-        })?;
         Ok(())
     }
 }
@@ -1701,7 +1666,7 @@ mod tests {
     }
 
     #[test]
-    fn write_keyboard_writes_vconsole_and_a_dconf_default_then_updates_it() {
+    fn write_keyboard_writes_vconsole_without_desktop_specific_state() {
         let temp = TempRoot::new("keyboard-brazil");
         let op = WriteKeyboard {
             target_root: temp.0.clone(),
@@ -1714,18 +1679,7 @@ mod tests {
             fs::read_to_string(temp.0.join("etc/vconsole.conf")).unwrap(),
             "KEYMAP=br\n"
         );
-        assert_eq!(
-            fs::read_to_string(temp.0.join("etc/dconf/profile/user")).unwrap(),
-            "user-db:user\nsystem-db:local\n"
-        );
-        assert_eq!(
-            fs::read_to_string(temp.0.join("etc/dconf/db/local.d/00-keyboard")).unwrap(),
-            "[org/gnome/desktop/input-sources]\nsources=[('xkb', 'br')]\n"
-        );
-        assert_eq!(
-            executor.calls(),
-            vec![format!("chroot {} dconf update", temp.0.display())]
-        );
+        assert!(executor.calls().is_empty());
         assert!(
             !temp.0.join("etc/default/keyboard").exists(),
             "no /etc/default dir here, nothing to write into"
@@ -1747,20 +1701,6 @@ mod tests {
         assert!(content.contains("XKBLAYOUT=\"us\""));
         assert!(content.contains("XKBVARIANT=\"intl\""));
         assert!(content.contains("BACKSPACE=\"guess\""));
-    }
-
-    #[test]
-    fn write_keyboard_combines_layout_and_variant_for_sources_with_a_variant() {
-        let temp = TempRoot::new("keyboard-us-intl");
-        let op = WriteKeyboard {
-            target_root: temp.0.clone(),
-            keyboard_layout: "us-intl".to_string(),
-        };
-        op.perform(&FakeExecutor::new()).unwrap();
-        assert_eq!(
-            fs::read_to_string(temp.0.join("etc/dconf/db/local.d/00-keyboard")).unwrap(),
-            "[org/gnome/desktop/input-sources]\nsources=[('xkb', 'us+intl')]\n"
-        );
     }
 
     #[test]
@@ -2229,7 +2169,7 @@ mod tests {
         assert_eq!(
             executor.calls(),
             vec![
-                "systemctl --root=/run/lyra-installer/target enable NetworkManager.service firewalld.service gdm.service cups.service"
+                "systemctl --root=/run/lyra-installer/target enable NetworkManager.service firewalld.service sddm.service cups.service"
             ]
         );
     }

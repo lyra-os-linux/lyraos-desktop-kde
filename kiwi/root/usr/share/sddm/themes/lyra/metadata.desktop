@@ -1,0 +1,12 @@
+[SddmGreeterTheme]
+Name=Lyra OS
+Description=Lyra OS login theme for KDE Plasma
+Type=sddm-theme
+Author=Lyra OS Project
+Copyright=Copyright 2026 Lyra OS Project
+License=GPL-3.0-or-later
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=lyra
+Theme-API=2.0

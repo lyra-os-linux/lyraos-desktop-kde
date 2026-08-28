@@ -32,10 +32,10 @@ class LiveSmokeTests(unittest.TestCase):
             target.write_text("fixture\n", encoding="utf-8")
         for path in ("usr/bin/lyra-installer", "usr/bin/lyra-install-lock"):
             os.chmod(root / path, 0o755)
-        gdm = root / "etc/gdm/custom.conf"
-        gdm.parent.mkdir(parents=True)
-        gdm.write_text(
-            "[daemon]\nAutomaticLoginEnable=true\nAutomaticLogin=liveuser\n",
+        sddm = root / "etc/sddm.conf.d/10-lyra-live.conf"
+        sddm.parent.mkdir(parents=True)
+        sddm.write_text(
+            "[Autologin]\nUser=liveuser\nSession=plasmawayland.desktop\n",
             encoding="utf-8",
         )
         desktop = root / "usr/share/applications/org.lyraos.LyraInstaller.desktop"
@@ -71,7 +71,7 @@ class LiveSmokeTests(unittest.TestCase):
                 root=root,
                 username="liveuser",
                 environment={
-                    "XDG_CURRENT_DESKTOP": "GNOME",
+                    "XDG_CURRENT_DESKTOP": "KDE",
                     "XDG_SESSION_TYPE": "wayland",
                 },
                 runner=self.runner,

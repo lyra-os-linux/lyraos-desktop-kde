@@ -17,7 +17,7 @@ use super::device::{DeviceRole, Disk, RaidLevel, StorageSnapshot};
 /// No size requirement is documented anywhere in the project yet (grepped
 /// `PROMPT-LYRA-OS.md`, the historical storage reference, and
 /// `docs/installer-architecture.md`
-/// — none set one); 20 GiB is a conservative placeholder for a Btrfs+GNOME
+/// — none set one); 20 GiB is a conservative placeholder for a Btrfs+Plasma
 /// desktop root and should be revisited once #49 (performance/size budget)
 /// lands.
 pub const MINIMUM_ROOT_SIZE_BYTES: u64 = 20 * 1024 * 1024 * 1024;

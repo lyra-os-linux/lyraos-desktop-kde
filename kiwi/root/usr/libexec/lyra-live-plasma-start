@@ -1,0 +1,28 @@
+#!/bin/sh
+set -u
+
+# A fast SDDM autologin can start the first Plasma layout before KWin has
+# announced an output. Plasma then persists the initial panel on screen -1.
+# Wait for a real enabled output before resetting the pristine live profile.
+state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/lyra-os"
+state_file="$state_dir/plasma-live-initialized"
+
+if [ ! -e "$state_file" ]; then
+    attempt=0
+    while [ "$attempt" -lt 60 ]; do
+        if /usr/bin/kscreen-doctor -o 2>/dev/null | grep -Eq '^Output:.*enabled'; then
+            break
+        fi
+        attempt=$((attempt + 1))
+        sleep 0.25
+    done
+
+    # Reapply Breeze with its stock default panel only after screen discovery,
+    # then brand the wallpaper without replacing the Plasma layout itself.
+    /usr/bin/lookandfeeltool -a org.kde.breeze.desktop --resetLayout || true
+    /usr/bin/plasma-apply-wallpaperimage \
+        /usr/share/backgrounds/lyra/2702-dawn.png || true
+    /usr/libexec/lyra-plasma-brand-panel || true
+    mkdir -p "$state_dir"
+    : > "$state_file"
+fi

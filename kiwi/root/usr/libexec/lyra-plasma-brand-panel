@@ -1,0 +1,23 @@
+#!/bin/sh
+set -u
+
+state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/lyra-os"
+state_file="$state_dir/plasma-panel-branded-v2"
+script_file=/usr/share/lyra-os/plasma/brand-panel.js
+
+[ -e "$state_file" ] && exit 0
+
+attempt=0
+while [ "$attempt" -lt 60 ]; do
+    if /usr/bin/qdbus6 org.kde.plasmashell /PlasmaShell \
+        org.kde.PlasmaShell.evaluateScript "$(/usr/bin/cat "$script_file")" \
+        >/dev/null 2>&1; then
+        mkdir -p "$state_dir"
+        : > "$state_file"
+        exit 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 0.25
+done
+
+exit 1

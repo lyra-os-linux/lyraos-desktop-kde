@@ -120,7 +120,7 @@ detect_context() {
     local root_fstype
     root_fstype="$(/usr/bin/findmnt -n -o FSTYPE / 2>/dev/null || true)"
     if [[ "$root_fstype" == overlay* || "$root_fstype" == squashfs* ]] || \
-       { /usr/bin/getent passwd liveuser >/dev/null 2>&1 && [ -e /etc/gdm/custom.conf ]; }; then
+       { /usr/bin/getent passwd liveuser >/dev/null 2>&1 && [ -e /etc/sddm.conf.d/10-lyra-live.conf ]; }; then
         printf 'live\n'
     elif [ -r /etc/os-release ]; then
         printf 'installed\n'
@@ -176,10 +176,10 @@ collect initramfs-modules /usr/bin/lsinitrd -m
 collect secure-boot /usr/bin/mokutil --sb-state
 collect efi-boot /usr/sbin/efibootmgr -v
 collect flatpak-remotes /usr/bin/flatpak remotes --system --show-details
-collect gnome-version /usr/bin/gnome-shell --version
+collect plasma-version /usr/bin/plasmashell --version
 collect lyra-packages /usr/bin/rpm -q \
-    beam fina lyra-installer lyra-theme postgres-draco \
-    sheliak sulafat vega-cli vega-gtk vega-web vegad
+    beam fina lyra-installer lyra-os-icons lyra-os-wallpapers postgres-draco \
+    sulafat vega-cli vega-qt vega-web vegad
 collect_file lyra-installer-log /var/log/lyra-installer.log
 
 # Connection names and SSIDs can occur in journal messages. They are supplied

@@ -129,7 +129,7 @@ class Release:
     def specification(self) -> str:
         return (
             f'Lyra OS "{self.codename}" {self.display_version} - live/installer ISO, '
-            f"openSUSE Leap 16 base, GNOME desktop, {self.architecture}"
+            f"openSUSE Leap 16 base, KDE Plasma desktop, {self.architecture}"
         )
 
     def fields(self) -> dict[str, str]:

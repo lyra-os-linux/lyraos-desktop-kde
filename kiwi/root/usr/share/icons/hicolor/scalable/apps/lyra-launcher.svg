@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Lyra OS</title>
+  <defs>
+    <linearGradient id="lyra" x1="12" y1="8" x2="50" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset=".52" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <path d="M21 8v31c0 9 6 15 15 15 8 0 14-5 16-12-4 3-8 5-13 5-7 0-11-4-11-11V8Z" fill="url(#lyra)"/>
+  <path d="M30 36c5-2 9-7 12-14M33 40c7-2 12-7 16-14" fill="none" stroke="#67e8f9" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+  <circle cx="43" cy="18" r="2" fill="#67e8f9"/>
+  <circle cx="49" cy="21" r="1.5" fill="#a78bfa"/>
+</svg>

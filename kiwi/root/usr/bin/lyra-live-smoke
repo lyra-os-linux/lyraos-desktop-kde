@@ -116,13 +116,13 @@ def validate_live_session(
         )
         expected_units = ("getty@tty1.service", "NetworkManager.service")
     else:
-        gdm_path = rooted(root, "/etc/gdm/custom.conf")
-        gdm = gdm_path.read_text(encoding="utf-8") if gdm_path.is_file() else ""
+        sddm_path = rooted(root, "/etc/sddm.conf.d/10-lyra-live.conf")
+        sddm = sddm_path.read_text(encoding="utf-8") if sddm_path.is_file() else ""
         check(
-            "gdm-autologin",
-            "AutomaticLoginEnable=true" in gdm
-            and "AutomaticLogin=liveuser" in gdm,
-            "GDM autologin targets liveuser",
+            "sddm-autologin",
+            "User=liveuser" in sddm
+            and "Session=plasmawayland.desktop" in sddm,
+            "SDDM autologin targets liveuser on Plasma Wayland",
         )
 
         desktop_path = rooted(
@@ -153,7 +153,7 @@ def validate_live_session(
             )
         expected_units = (
             "graphical.target",
-            "gdm.service",
+            "sddm.service",
             "NetworkManager.service",
         )
 
@@ -166,11 +166,11 @@ def validate_live_session(
         )
 
     if profile == "desktop":
-        code, output = runner(["pgrep", "-x", "gnome-shell"])
+        code, output = runner(["pgrep", "-x", "plasmashell"])
         check(
-            "gnome-shell",
+            "plasmashell",
             code == 0 and bool(output),
-            "GNOME Shell process is running",
+            "Plasma Shell process is running",
         )
 
     code, failed_units = runner(

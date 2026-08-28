@@ -36,6 +36,7 @@ PACKAGE_SIGNING_FINGERPRINTS = {
     "7F009157B127B994D5CFBE76F74F09BC3FA1D6CE",
     "85E26470357A6391DBA1BC9E0739B8027BF939EF",
     "399218A6E088C4053F4533BE58097F767EDCA82E",
+    "F8875B880D518B6B8C530D1345A1D0671ABD1AFB",
 }
 INSTALLER_APP_ID = "org.lyraos.LyraInstaller"
 INSTALLER_EXEC = "/usr/bin/lyra-install-lock /usr/bin/lyra-installer"
@@ -104,7 +105,7 @@ class Manifest:
     def validate(self) -> None:
         if self.api_url != "https://api.opensuse.org":
             raise PolicyError("only the canonical HTTPS OBS API is allowed")
-        if self.source_repository != "https://github.com/lyra-os-linux/lyraos-desktop":
+        if self.source_repository != "https://github.com/lyra-os-linux/lyraos-desktop-kde":
             raise PolicyError("GitHub must remain the canonical image source")
         if self.iso_provider != "sourceforge":
             raise PolicyError("SourceForge must remain the ISO distribution provider")
@@ -235,15 +236,21 @@ def validate_installer_identity() -> None:
         "Icon": app_id,
         "StartupWMClass": INSTALLER_WM_CLASS,
     }
-    for path in (
-        packaged_launcher,
-        KIWI / "root/etc/xdg/autostart/lyra-installer-autostart.desktop",
-    ):
+    for path in (packaged_launcher, image_launcher):
         entry = desktop_entry(path)
         for key, value in expected.items():
             if entry.get(key) != value:
                 relative = path.relative_to(ROOT)
                 raise PolicyError(f"{relative}: {key} must be {value!r}")
+
+    autostart_path = KIWI / "root/etc/xdg/autostart/lyra-installer-autostart.desktop"
+    autostart = desktop_entry(autostart_path)
+    autostart_expected = dict(expected)
+    autostart_expected["Exec"] = INSTALLER_EXEC
+    for key, value in autostart_expected.items():
+        if autostart.get(key) != value:
+            relative = autostart_path.relative_to(ROOT)
+            raise PolicyError(f"{relative}: {key} must be {value!r}")
 
     icon_name = f"{app_id}.png"
     source_icons = ROOT / "installer/src-tauri/icons"

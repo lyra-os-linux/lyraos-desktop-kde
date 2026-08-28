@@ -76,18 +76,29 @@ class ImagePolicyTests(unittest.TestCase):
             self.assertIn(policy, drop_in)
 
     def test_vega_update_indicator_is_enabled_by_default(self) -> None:
-        override = (
-            ROOT
-            / "kiwi/root/usr/share/glib-2.0/schemas/99-lyra-sheliak.gschema.override"
-        ).read_text(encoding="utf-8")
-        self.assertIn("sheliak@lyraos.com.br", override)
-        self.assertIn("updates-indicator@lyraos.com.br", override)
-
         root = ET.parse(ROOT / "kiwi/config.xml").getroot()
         desktop_packages = {
             node.attrib["name"] for node in root.findall("packages/package")
         }
-        self.assertIn("vega-gtk", desktop_packages)
+        self.assertIn("vega-qt", desktop_packages)
+
+    def test_plasma_panel_uses_lyra_launcher_and_vega(self) -> None:
+        panel_script = (
+            ROOT / "kiwi/root/usr/share/lyra-os/plasma/brand-panel.js"
+        ).read_text(encoding="utf-8")
+        brander = ROOT / "kiwi/root/usr/libexec/lyra-plasma-brand-panel"
+        autostart = (
+            ROOT / "kiwi/root/etc/xdg/autostart/lyra-plasma-brand-panel.desktop"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("var plasmaPanels = panels();", panel_script)
+        self.assertIn('widget.type === "org.kde.plasma.kickoff"', panel_script)
+        self.assertIn('widget.writeConfig("icon", launcherIcon)', panel_script)
+        self.assertIn("applications:org.lyraos.Vega.Qt.desktop", panel_script)
+        self.assertIn('widget.readConfig("launchers", [])', panel_script)
+        self.assertIn('entry.indexOf("org.kde.discover") === -1', panel_script)
+        self.assertTrue(brander.stat().st_mode & stat.S_IXUSR)
+        self.assertIn("OnlyShowIn=KDE;", autostart)
 
     def test_canonical_sources_pass_repository_and_signature_policy(self) -> None:
         image_build.validate_sources(self.manifest)
@@ -138,7 +149,10 @@ class ImagePolicyTests(unittest.TestCase):
         self.assertFalse(hasattr(self.manifest, "package"))
 
     def test_distribution_policy_uses_github_and_sourceforge(self) -> None:
-        self.assertEqual(self.manifest.source_repository, "https://github.com/lyra-os-linux/lyraos-desktop")
+        self.assertEqual(
+            self.manifest.source_repository,
+            "https://github.com/lyra-os-linux/lyraos-desktop-kde",
+        )
         self.assertEqual(self.manifest.iso_provider, "sourceforge")
         help_text = image_build.parser().format_help()
         self.assertNotIn("publish", help_text)
@@ -175,8 +189,12 @@ class ImagePolicyTests(unittest.TestCase):
         root = ET.parse(ROOT / "kiwi/config.xml").getroot()
         packages = {node.attrib["name"] for node in root.findall("packages/package")}
 
-        for package in ("fish", "nvm-fish", "git", "linuxtoys", "lyra-welcome"):
+        for package in ("fish", "nvm-fish", "git", "linuxtoys"):
             self.assertIn(package, packages)
+
+        # The published Welcome currently requires vega-gtk, whose desktop
+        # file/icon payload conflicts with the KDE edition's vega-qt package.
+        self.assertNotIn("lyra-welcome", packages)
 
         live_user = root.find("users/user[@name='liveuser']")
         assert live_user is not None
@@ -281,11 +299,6 @@ class ImagePolicyTests(unittest.TestCase):
         }
         self.assertNotIn("chord", desktop_packages)
 
-        defaults = (
-            ROOT
-            / "kiwi/root/usr/share/glib-2.0/schemas/99-lyra-desktop-defaults.gschema.override"
-        ).read_text(encoding="utf-8")
-        self.assertNotIn("'org.lyraos.Chord.desktop'", defaults)
 
     def test_bluetooth_and_screen_recording_are_installed_and_enabled(self) -> None:
         # Real gap found on an installed image: onlyRequired dropped both
@@ -297,13 +310,13 @@ class ImagePolicyTests(unittest.TestCase):
         desktop_packages = {
             node.attrib["name"] for node in root.findall("packages/package")
         }
-        for name in ("bluez", "bluez-firmware", "gnome-bluetooth", "gstreamer-plugins-good"):
+        for name in ("bluez", "bluez-firmware", "bluedevil6", "gstreamer-plugins-good"):
             self.assertIn(name, desktop_packages, name)
 
         config_sh = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
         # Must be inside the display-manager block.
         desktop_branch = config_sh[
-            config_sh.index("# Display manager") : config_sh.index("# zram-generator")
+            config_sh.index("# Plasma display manager") : config_sh.index("# zram-generator")
         ]
         self.assertIn("suseInsertService bluetooth", desktop_branch)
 
@@ -388,19 +401,14 @@ class ImagePolicyTests(unittest.TestCase):
             "libreoffice-impress",
             "libreoffice-math",
             "libreoffice-writer",
-            "libreoffice-gnome",
-            "libreoffice-gtk3",
+            "libreoffice-qt6",
             "libreoffice-l10n-en",
             "libreoffice-l10n-pt_BR",
             "libreoffice-l10n-es",
         }
         self.assertTrue(libreoffice.issubset(packages))
 
-        defaults = (
-            ROOT
-            / "kiwi/root/usr/share/glib-2.0/schemas/99-lyra-desktop-defaults.gschema.override"
-        ).read_text(encoding="utf-8")
-        self.assertIn("libreoffice-writer.desktop", defaults)
+        self.assertIn("libreoffice-writer", packages)
 
     def test_desktop_app_curation_uses_vlc_without_gnome_software_or_monitor(self) -> None:
         root = ET.parse(ROOT / "kiwi/config.xml").getroot()
@@ -441,7 +449,7 @@ class ImagePolicyTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("gnome-software", language_remediation)
 
-    def test_installed_grub_theme_contract_is_validated_by_build_and_installer(self) -> None:
+    def test_gnome_grub_theme_is_not_required_by_kde_build(self) -> None:
         deploy = (ROOT / "installer/src/service/operations/deploy.rs").read_text(
             encoding="utf-8"
         )
@@ -459,8 +467,7 @@ class ImagePolicyTests(unittest.TestCase):
         # assume it is always present.
         self.assertIn('if [ -s "$GRUB_THEME_ASSET" ]; then', hook)
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
-        self.assertIn("IMAGE_INSTALLED_GRUB_THEME", helper)
-        self.assertIn("IMAGE_INSTALLED_GRUB_DEFAULT", helper)
+        self.assertNotIn("IMAGE_INSTALLED_GRUB_THEME", helper)
         self.assertIn('"$KIWI_DESC/edit_boot_config.sh"', helper)
 
     def test_vm_helper_can_build_without_destroying_existing_vm(self) -> None:
@@ -485,12 +492,24 @@ class ImagePolicyTests(unittest.TestCase):
         self.assertIn("start_loader_guard", helper)
         self.assertIn("stop_loader_guard", helper)
         self.assertIn("sudo -n ldconfig", helper)
-        self.assertLess(helper.index("start_loader_guard"), helper.index("sudo kiwi-ng"))
-        self.assertGreater(helper.rindex("stop_loader_guard"), helper.index("sudo kiwi-ng"))
+        kiwi_build = helper.index("if run_privileged kiwi-ng")
+        self.assertLess(helper.index("start_loader_guard"), kiwi_build)
+        self.assertGreater(helper.rindex("stop_loader_guard"), kiwi_build)
 
     def test_vm_helper_can_boot_installed_disk_without_iso_or_reset(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
         self.assertIn("--boot-installed", helper)
+
+    def test_vm_uses_supported_virtio_gtk_display(self) -> None:
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("-display spice-app", helper)
+        self.assertIn("-display gtk", helper)
+        self.assertNotIn("-vga qxl", helper)
+        self.assertIn("-vga virtio", helper)
+        self.assertIn('VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"', helper)
+        self.assertIn('-monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"', helper)
         installed_branch = helper.index('if [ "$BOOT_INSTALLED" -eq 1 ]; then')
         installed_exit = helper.index('exit "$INSTALLED_QEMU_STATUS"')
         destructive_reset = helper.index('echo "--- deleting previous VM disk')
@@ -547,24 +566,77 @@ class ImagePolicyTests(unittest.TestCase):
             helper.index('echo "--- building ISO with kiwi-ng'),
         )
 
-    def test_image_activates_complete_lyra_gtk_theme_for_new_users(self) -> None:
-        override = (
-            ROOT
-            / "kiwi/root/usr/share/glib-2.0/schemas/zz-lyra-desktop-wallpaper.gschema.override"
-        ).read_text(encoding="utf-8")
-        gtk4 = (ROOT / "kiwi/root/etc/skel/.config/gtk-4.0/gtk.css").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("[org.gnome.desktop.interface]", override)
-        self.assertIn("gtk-theme='Lyra-OS'", override)
-        self.assertIn("color-scheme='prefer-dark'", override)
-        self.assertIn(
-            '@import url("file:///usr/share/themes/Lyra-OS/gtk-4.0/gtk.css");',
-            gtk4,
-        )
+    def test_kde_image_does_not_install_the_gnome_theme(self) -> None:
+        root = ET.parse(ROOT / "kiwi/config.xml").getroot()
+        packages = {node.attrib["name"] for node in root.findall("packages/package")}
+        self.assertNotIn("lyra-os-theme", packages)
+
+    def test_kde_image_installs_sddm_xorg_input_driver(self) -> None:
+        root = ET.parse(ROOT / "kiwi/config.xml").getroot()
+        packages = {node.attrib["name"] for node in root.findall("packages/package")}
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
-        self.assertIn("IMAGE_GTK4_DEFAULT", helper)
-        self.assertIn("does not activate the complete Lyra OS GTK theme", helper)
+
+        self.assertIn("xf86-input-libinput", packages)
+        self.assertIn("libinput_drv.so", helper)
+
+    def test_live_sddm_accepts_empty_password_without_leaking_to_install(self) -> None:
+        config = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
+        deploy = (
+            ROOT / "installer/src/service/operations/deploy.rs"
+        ).read_text(encoding="utf-8")
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
+
+        for path in (
+            "etc/pam.d/common-auth-lyra-live",
+            "etc/pam.d/sddm",
+            "etc/pam.d/sddm-autologin",
+        ):
+            self.assertIn(path, deploy)
+        self.assertIn("pam_unix.so nullok try_first_pass", config)
+        self.assertIn("common-auth-lyra-live", helper)
+        self.assertIn("pam_nologin.so", helper)
+
+    def test_live_plasma_waits_for_screen_before_creating_default_layout(self) -> None:
+        startup = (
+            ROOT / "kiwi/root/usr/libexec/lyra-live-plasma-start"
+        ).read_text(encoding="utf-8")
+        autostart = (
+            ROOT / "kiwi/root/etc/xdg/autostart/lyra-plasma-initialize.desktop"
+        ).read_text(encoding="utf-8")
+        deploy = (
+            ROOT / "installer/src/service/operations/deploy.rs"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("kscreen-doctor -o", startup)
+        self.assertIn("--resetLayout", startup)
+        self.assertIn("plasma-apply-wallpaperimage", startup)
+        self.assertIn("2702-dawn.png", startup)
+        self.assertIn("Exec=/usr/libexec/lyra-live-plasma-start", autostart)
+        self.assertIn("usr/libexec/lyra-live-plasma-start", deploy)
+
+    def test_kde_image_uses_native_lyra_sddm_theme(self) -> None:
+        theme = ROOT / "kiwi/root/usr/share/sddm/themes/lyra"
+        main = (theme / "Main.qml").read_text(encoding="utf-8")
+        config = (theme / "theme.conf").read_text(encoding="utf-8")
+        selection = (
+            ROOT / "kiwi/root/etc/sddm.conf.d/20-lyra-theme.conf"
+        ).read_text(encoding="utf-8")
+        breeze_override = (
+            ROOT
+            / "kiwi/root/usr/share/sddm/themes/breeze/theme.conf.user"
+        ).read_text(encoding="utf-8")
+
+        self.assertTrue((theme / "metadata.desktop").is_file())
+        self.assertTrue((theme / "logo.svg").is_file())
+        self.assertIn("Current=breeze", selection)
+        self.assertIn("2702-dawn.png", config)
+        self.assertIn("2702-dawn.png", breeze_override)
+        self.assertIn("/usr/share/sddm/themes/lyra/logo.svg", breeze_override)
+        self.assertNotIn("Current=lyra", selection)
+        schema_files = list(
+            (ROOT / "kiwi/root/usr/share/glib-2.0/schemas").glob("*.gschema.override")
+        )
+        self.assertEqual(schema_files, [])
 
     def test_vm_helper_keeps_build_output_outside_the_source_checkout(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")

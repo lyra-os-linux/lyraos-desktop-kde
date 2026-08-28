@@ -17,7 +17,7 @@ from typing import Callable
 CommandRunner = Callable[[list[str]], tuple[int, str]]
 
 LIVE_ONLY_PATHS = (
-    "/etc/gdm/custom.conf",
+    "/etc/sddm.conf.d/10-lyra-live.conf",
     "/etc/xdg/autostart/lyra-installer-autostart.desktop",
     "/usr/bin/lyra-install-lock",
     "/usr/bin/lyra-installer",
@@ -45,13 +45,13 @@ SERVER_LIVE_ONLY_PATHS = (
 # scope without an entry criterion for a v2).
 EXPECTED_ROOT_FSTYPE = {"desktop": "btrfs", "server": "ext4"}
 
-# Desktop-only units (gdm, cups) vs the persistent services the server's
+# Desktop-only units (sddm, cups) vs the persistent services the server's
 # console installer enables. vegad is deliberately absent: it is a static
 # D-Bus-activated unit which exits after its idle timeout.
 EXPECTED_ACTIVE_UNITS = {
     "desktop": (
         "graphical.target",
-        "gdm.service",
+        "sddm.service",
         "NetworkManager.service",
         "firewalld.service",
         "cups.service",
@@ -362,13 +362,13 @@ def validate_first_boot(
         )
 
     if profile == "desktop":
-        # No GNOME/graphical session on the server profile at all
+        # No Plasma/graphical session on the server profile at all
         # (docs/server-edition.md) - nothing to check a shell process for.
-        code, output = runner(["pgrep", "-x", "gnome-shell"])
+        code, output = runner(["pgrep", "-x", "plasmashell"])
         check(
-            "gnome-shell",
+            "plasmashell",
             code == 0 and bool(output),
-            "GNOME Shell process is running",
+            "Plasma Shell process is running",
         )
         observations["desktop"] = environment.get("XDG_CURRENT_DESKTOP", "")
         observations["session_type"] = environment.get("XDG_SESSION_TYPE", "")

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Initialize Lyra Plasma Session
+Exec=/usr/libexec/lyra-live-plasma-start
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=1

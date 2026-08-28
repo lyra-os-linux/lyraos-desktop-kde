@@ -63,9 +63,10 @@ ln -sfn ../proc/self/mounts /etc/mtab
 suseInsertService NetworkManager
 suseInsertService firewalld
 
-# Display manager
-baseUpdateSysConfig /etc/sysconfig/displaymanager DISPLAYMANAGER gdm
-suseInsertService gdm
+# Plasma display manager
+baseUpdateSysConfig /etc/sysconfig/displaymanager DISPLAYMANAGER sddm
+# Leap's display-manager-legacy.service reads DISPLAYMANAGER above. Enabling
+# sddm.service directly conflicts with the distribution-managed alias.
 
 # bluez is present but its service isn't enabled by default - without
 # this, Bluetooth stays off even with the adapter and driver both
@@ -76,12 +77,45 @@ suseInsertService bluetooth
 # Live-session autologin as liveuser. This is a live-boot convenience
 # only; the installed system's login/account model is set up by the
 # Lyra Installer (root disabled, sudo user), not here.
-mkdir -p /etc/gdm
-cat > /etc/gdm/custom.conf <<EOF
-[daemon]
-AutomaticLoginEnable=true
-AutomaticLogin=liveuser
+# SDDM's PAM account check rejects the locked password created by KIWI's
+# user declaration even for autologin, so leave this live-only account with
+# an empty password. The installer never copies the live account.
+passwd -d liveuser
+install -Dm0644 /dev/null /usr/lib/lyra-os/liveuser-passwordless
+mkdir -p /etc/sddm.conf.d
+cat > /etc/sddm.conf.d/10-lyra-live.conf <<EOF
+[Autologin]
+User=liveuser
+Session=plasmawayland.desktop
+Relogin=false
 EOF
+cat > /etc/sddm.conf <<EOF
+[Autologin]
+User=liveuser
+Session=plasmawayland.desktop
+Relogin=false
+
+[Theme]
+Current=breeze
+EOF
+
+# The distribution's common-auth intentionally rejects empty passwords. The
+# live account is the sole exception: allow its deliberately empty password
+# at SDDM, while leaving every other PAM consumer on the Leap defaults.
+# Also omit pam_nologin from the live autologin service: SDDM can attempt its
+# one-shot login while systemd is still completing the boot transition.
+# All three overrides are removed from the installed target by the installer.
+mkdir -p /etc/pam.d
+sed 's/pam_unix\.so[[:space:]]\+try_first_pass/pam_unix.so nullok try_first_pass/' \
+    /usr/lib/pam.d/common-auth > /etc/pam.d/common-auth-lyra-live
+sed 's/substack[[:space:]]\+common-auth/substack       common-auth-lyra-live/' \
+    /usr/lib/pam.d/sddm > /etc/pam.d/sddm
+sed '/pam_nologin\.so/d' /usr/lib/pam.d/sddm-autologin \
+    > /etc/pam.d/sddm-autologin
+chmod 0644 \
+    /etc/pam.d/common-auth-lyra-live \
+    /etc/pam.d/sddm \
+    /etc/pam.d/sddm-autologin
 
 # Passwordless sudo for the live session only. liveuser's password is
 # locked ("!" in config.xml), so without this it cannot authenticate to
@@ -106,12 +140,6 @@ if [ ! -r /etc/flatpak/remotes.d/flathub.flatpakrepo ]; then
     echo "Missing versioned Flathub remote definition" >&2
     exit 1
 fi
-
-# Compile the image-owned GNOME defaults after KIWI has overlaid root/.
-# This activates the system-installed Sheliak extension for the live
-# account and for users subsequently created by the installer, while
-# allowing each user to disable it normally.
-glib-compile-schemas /usr/share/glib-2.0/schemas
 
 # Fish plugin set, resolved once here instead of on every machine's first
 # terminal. Fisher has no RPM upstream and pulls its plugins from GitHub,

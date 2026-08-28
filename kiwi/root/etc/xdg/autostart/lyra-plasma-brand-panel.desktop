@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Lyra Plasma panel branding
+Exec=/usr/libexec/lyra-plasma-brand-panel
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

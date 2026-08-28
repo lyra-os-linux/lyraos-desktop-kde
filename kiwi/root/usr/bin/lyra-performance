@@ -114,7 +114,8 @@ def atomic_json(path: Path, document: dict[str, Any]) -> None:
 def detect_context() -> str:
     root_type = command("findmnt", "-n", "-o", "FSTYPE", "/")
     if root_type.startswith(("overlay", "squashfs")) or (
-        Path("/etc/gdm/custom.conf").exists() and command("getent", "passwd", "liveuser")
+        Path("/etc/sddm.conf.d/10-lyra-live.conf").exists()
+        and command("getent", "passwd", "liveuser")
     ):
         return "live"
     return "installed"
@@ -194,7 +195,7 @@ def boot_to_desktop_seconds() -> float | None:
         try:
             if process.stat().st_uid != os.getuid():
                 continue
-            if (process / "comm").read_text(encoding="utf-8").strip() != "gnome-shell":
+            if (process / "comm").read_text(encoding="utf-8").strip() != "plasmashell":
                 continue
             stat = (process / "stat").read_text(encoding="utf-8")
             tail = stat[stat.rfind(")") + 2 :].split()

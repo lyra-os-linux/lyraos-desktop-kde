@@ -1,4 +1,0 @@
-# Enable Lyra's GNOME integration for the live session and newly-created users.
-# This is a default, not a lock: users remain free to disable the extension.
-[org.gnome.shell]
-enabled-extensions=['sheliak@lyraos.com.br', 'updates-indicator@lyraos.com.br']

@@ -1,0 +1,9 @@
+[General]
+background=/usr/share/backgrounds/lyra/2702-dawn.png
+logo=/usr/share/sddm/themes/lyra/logo.svg
+showlogo=shown
+showClock=true
+type=image
+color=#102331
+fontSize=10
+needsFullUserModel=false

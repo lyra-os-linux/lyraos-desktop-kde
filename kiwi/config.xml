@@ -18,7 +18,7 @@
   <description type="system">
     <author>Rodrigo Brito</author>
     <contact>rodrigo@lyraos.com.br</contact>
-    <specification>Lyra OS "Odisseia" 27.02 Alpha 7 - live/installer ISO, openSUSE Leap 16 base, GNOME desktop, x86_64</specification>
+    <specification>Lyra OS "Odisseia" 27.02 Alpha 7 - live/installer ISO, openSUSE Leap 16 base, KDE Plasma desktop, x86_64</specification>
   </description>
 
   <preferences>
@@ -34,17 +34,8 @@
   <preferences>
     <!-- Generated from release.toml; user-facing strings say "Alpha 7". -->
     <version>27.02-alpha7</version>
-    <!--
-      Selects lyra-os-theme's "Lyra-OS" assets. The
-      bootloader theme is active in the live GRUB menu. The bootsplash
-      selection records the desired default in the image root, but the
-      live initrd deliberately excludes Plymouth: adding plymouth-dracut
-      makes the non-host-only dracut build pull every generic DRM driver
-      and its firmware, producing a 138 MiB initrd that stalls visibly in
-      GRUB. See the package-list comment and kiwi/README.md.
-    -->
-    <bootloader-theme>Lyra-OS</bootloader-theme>
-    <bootsplash-theme>Lyra-OS</bootsplash-theme>
+    <!-- Use the openSUSE bootloader and bootsplash defaults until the KDE
+         edition has native Lyra boot assets independent of the GNOME theme. -->
     <type
       image="iso"
       primary="true"
@@ -334,6 +325,13 @@
     <package name="plasma6-nm"/>
     <package name="plasma6-pa"/>
     <package name="plasma6-firewall"/>
+    <!-- SDDM's greeter starts on X11 even when the selected desktop session
+         is Plasma Wayland. onlyRequired does not pull these runtime tools. -->
+    <package name="xorg-x11-server"/>
+    <!-- The Xorg server alone has no physical input driver. Keep libinput
+         explicit or SDDM renders normally but cannot receive keys/clicks. -->
+    <package name="xf86-input-libinput"/>
+    <package name="dbus-1-daemon"/>
     <package name="sddm-qt6"/>
     <package name="sddm-greeter-qt6"/>
 
@@ -371,9 +369,6 @@
          bundled auto-updater is redirected to RPM/Zypper via
          ZED_UPDATE_EXPLANATION; GNOME Text Editor stays installed too. -->
     <package name="zed"/>
-    <!-- Shown once per installed user through its guarded XDG autostart.
-         The launcher explicitly skips the liveuser installation session. -->
-    <package name="lyra-welcome"/>
     <package name="kcalc"/>
     <package name="partitionmanager"/>
     <package name="okular"/>
@@ -487,34 +482,7 @@
          a interface nunca recebe privilégios amplos. -->
     <package name="lyra-upgrade"/>
 
-    <!--
-      Branding (Lyra-Theme, github.com/lyra-os-linux/lyraos-desktop-theme). Package
-      names, dependency, and behavior confirmed against that repo's real
-      packaging/opensuse/*.spec and install-rpm.sh, not assumed:
-
-      - lyra-os-theme's %post already sets GRUB_THEME in
-        /etc/default/grub + runs grub2-mkconfig, and selects the
-        Lyra-OS Plymouth theme. The live initrd intentionally omits
-        plymouth-dracut; only the GRUB theme is enabled on the live path.
-      - It also ships a compiled-in gsettings default
-        (/usr/share/glib-2.0/schemas/99-lyra-os.gschema.override:
-        icon-theme, accent-color, color-scheme=prefer-dark, both
-        picture-uri/picture-uri-dark wallpapers). The Desktop overlay's
-        later zz-lyra-desktop-wallpaper.gschema.override intentionally selects
-        Lyra OS - Dawn for both color schemes, while leaving the setting
-        user-changeable.
-      - Its %post also installs the GDM dconf defaults and branded logo.
-      - Lyra's own 99-lyra-desktop-defaults.gschema.override enables the
-        minimize/maximize titlebar buttons and keeps directories before files
-        in Nautilus/GTK file views. These are defaults, not locked settings.
-      - Requires lyra-os-icons + plymouth-plugin-two-step
-        automatically (RPM deps); fastfetch is only a Recommends in the
-        spec file so it's made explicit here. Neofetch is left out
-        deliberately (Suggests-only upstream, and it's an archived/EOL
-        project - fastfetch is the maintained one and is what the theme
-        package's own README leads with).
-    -->
-    <package name="lyra-os-theme"/>
+    <!-- Desktop-independent Lyra branding available as published RPMs. -->
     <package name="lyra-os-icons"/>
     <package name="lyra-os-wallpapers"/>
     <package name="fastfetch"/>

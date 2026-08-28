@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="64" viewBox="0 0 240 64">
+  <title>Lyra OS</title>
+  <g transform="translate(4 4) scale(.28)" fill="none" stroke="#ffffff"
+     stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 0v60c0 44 36 80 80 80s80-36 80-80V0"/>
+    <path d="M0 22h160M0 52h160M80 140v30M50 170h60"/>
+  </g>
+  <text x="64" y="41" fill="#ffffff"
+        font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="29"
+        font-weight="600" letter-spacing="3">LYRA OS</text>
+</svg>
