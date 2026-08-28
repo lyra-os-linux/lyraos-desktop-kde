@@ -83,22 +83,48 @@ class ImagePolicyTests(unittest.TestCase):
         self.assertIn("vega-qt", desktop_packages)
 
     def test_plasma_panel_uses_lyra_launcher_and_vega(self) -> None:
-        panel_script = (
-            ROOT / "kiwi/root/usr/share/lyra-os/plasma/brand-panel.js"
+        setup_dir = (
+            ROOT
+            / "kiwi/root/usr/share/plasma/look-and-feel/org.kde.breeze.desktop"
+            / "contents/plasmoidsetupscripts"
+        )
+        kickoff = (setup_dir / "org.kde.plasma.kickoff.js").read_text(
+            encoding="utf-8"
+        )
+        icon_tasks = (setup_dir / "org.kde.plasma.icontasks.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('applet.writeConfig("icon", "lyra-launcher")', kickoff)
+        self.assertIn("applications:org.lyraos.Vega.Qt.desktop", icon_tasks)
+        self.assertIn('applet.readConfig("launchers", [])', icon_tasks)
+        self.assertIn('entry.indexOf("org.kde.discover") === -1', icon_tasks)
+        self.assertIn("applet.reloadConfig()", kickoff)
+        self.assertIn("applet.reloadConfig()", icon_tasks)
+        self.assertFalse(
+            (ROOT / "kiwi/root/etc/xdg/autostart/lyra-plasma-brand-panel.desktop").exists()
+        )
+
+    def test_live_sddm_has_one_shot_autologin_recovery(self) -> None:
+        retry = ROOT / "kiwi/root/usr/libexec/lyra-live-sddm-autologin-retry"
+        unit = (
+            ROOT
+            / "kiwi/root/usr/lib/systemd/system/lyra-live-autologin-retry.service"
         ).read_text(encoding="utf-8")
-        brander = ROOT / "kiwi/root/usr/libexec/lyra-plasma-brand-panel"
-        autostart = (
-            ROOT / "kiwi/root/etc/xdg/autostart/lyra-plasma-brand-panel.desktop"
+        config = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
+        deploy = (
+            ROOT / "installer/src/service/operations/deploy.rs"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("var plasmaPanels = panels();", panel_script)
-        self.assertIn('widget.type === "org.kde.plasma.kickoff"', panel_script)
-        self.assertIn('widget.writeConfig("icon", launcherIcon)', panel_script)
-        self.assertIn("applications:org.lyraos.Vega.Qt.desktop", panel_script)
-        self.assertIn('widget.readConfig("launchers", [])', panel_script)
-        self.assertIn('entry.indexOf("org.kde.discover") === -1', panel_script)
-        self.assertTrue(brander.stat().st_mode & stat.S_IXUSR)
-        self.assertIn("OnlyShowIn=KDE;", autostart)
+        self.assertTrue(retry.stat().st_mode & stat.S_IXUSR)
+        retry_script = retry.read_text(encoding="utf-8")
+        self.assertIn("loginctl list-sessions", retry_script)
+        self.assertIn("try-restart display-manager.service", retry_script)
+        self.assertIn("lyra-live-sddm-autologin-retried", retry_script)
+        self.assertIn("After=display-manager.service", unit)
+        self.assertIn("WantedBy=graphical.target", unit)
+        self.assertIn("suseInsertService lyra-live-autologin-retry", config)
+        self.assertIn("lyra-live-autologin-retry.service", deploy)
 
     def test_canonical_sources_pass_repository_and_signature_policy(self) -> None:
         image_build.validate_sources(self.manifest)

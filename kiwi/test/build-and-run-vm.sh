@@ -617,6 +617,11 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   IMAGE_INSTALLER_AUTOSTART="$BUILD_DIR/build/image-root/etc/xdg/autostart/lyra-installer-autostart.desktop"
   IMAGE_PLASMA_INITIALIZE_AUTOSTART="$BUILD_DIR/build/image-root/etc/xdg/autostart/lyra-plasma-initialize.desktop"
   IMAGE_LIVE_PLASMA_START="$BUILD_DIR/build/image-root/usr/libexec/lyra-live-plasma-start"
+  IMAGE_KICKOFF_SETUP="$BUILD_DIR/build/image-root/usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/plasmoidsetupscripts/org.kde.plasma.kickoff.js"
+  IMAGE_ICONTASKS_SETUP="$BUILD_DIR/build/image-root/usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/plasmoidsetupscripts/org.kde.plasma.icontasks.js"
+  IMAGE_AUTOLOGIN_RETRY="$BUILD_DIR/build/image-root/usr/libexec/lyra-live-sddm-autologin-retry"
+  IMAGE_AUTOLOGIN_RETRY_UNIT="$BUILD_DIR/build/image-root/usr/lib/systemd/system/lyra-live-autologin-retry.service"
+  IMAGE_AUTOLOGIN_RETRY_LINK="$BUILD_DIR/build/image-root/etc/systemd/system/graphical.target.wants/lyra-live-autologin-retry.service"
   IMAGE_INSTALLER_LAUNCHER="$BUILD_DIR/build/image-root/usr/share/applications/org.lyraos.LyraInstaller.desktop"
   IMAGE_INSTALLER_ICON="$BUILD_DIR/build/image-root/usr/share/icons/hicolor/256x256/apps/org.lyraos.LyraInstaller.png"
   for INSTALLER_EXECUTABLE in \
@@ -624,6 +629,7 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
       "$IMAGE_INSTALLER_LOCK" \
       "$IMAGE_INSTALLER_SERVICE" \
       "$IMAGE_LIVE_PLASMA_START" \
+      "$IMAGE_AUTOLOGIN_RETRY" \
       "$IMAGE_HARDWARE_MATRIX" \
       "$IMAGE_LIVE_SMOKE" \
       "$IMAGE_SYSTEM_SMOKE" \
@@ -675,6 +681,15 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
      ! grep -F 'kscreen-doctor -o' "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
      ! grep -F 'lookandfeeltool -a org.kde.breeze.desktop --resetLayout' \
         "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
+     ! grep -F 'writeConfig("icon", "lyra-launcher")' \
+        "$IMAGE_KICKOFF_SETUP" >/dev/null ||
+     ! grep -F 'applications:org.lyraos.Vega.Qt.desktop' \
+        "$IMAGE_ICONTASKS_SETUP" >/dev/null ||
+     ! grep -F 'try-restart display-manager.service' \
+        "$IMAGE_AUTOLOGIN_RETRY" >/dev/null ||
+     ! grep -F 'WantedBy=graphical.target' \
+        "$IMAGE_AUTOLOGIN_RETRY_UNIT" >/dev/null ||
+     [ ! -L "$IMAGE_AUTOLOGIN_RETRY_LINK" ] ||
      ! grep -Fx 'StartupWMClass=lyra-installer' \
         "$IMAGE_INSTALLER_AUTOSTART" >/dev/null; then
     echo "!!! built image has no valid Plasma autostart for Lyra Installer" >&2

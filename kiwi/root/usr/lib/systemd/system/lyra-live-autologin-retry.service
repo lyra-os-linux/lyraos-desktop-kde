@@ -1,0 +1,11 @@
+[Unit]
+Description=Retry Lyra live-session autologin once
+After=display-manager.service systemd-user-sessions.service
+Requires=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/lyra-live-sddm-autologin-retry
+
+[Install]
+WantedBy=graphical.target

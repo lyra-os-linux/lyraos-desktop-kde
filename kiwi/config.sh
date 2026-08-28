@@ -62,6 +62,7 @@ ln -sfn ../proc/self/mounts /etc/mtab
 # Networking / firewall - Leap defaults, enabled explicitly for the live boot
 suseInsertService NetworkManager
 suseInsertService firewalld
+suseInsertService lyra-live-autologin-retry
 
 # Plasma display manager
 baseUpdateSysConfig /etc/sysconfig/displaymanager DISPLAYMANAGER sddm

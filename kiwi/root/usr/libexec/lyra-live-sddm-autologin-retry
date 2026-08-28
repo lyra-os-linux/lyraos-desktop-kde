@@ -1,0 +1,24 @@
+#!/bin/sh
+set -u
+
+marker=/run/lyra-live-sddm-autologin-retried
+
+[ -e "$marker" ] && exit 0
+: > "$marker"
+
+# SDDM can lose its first autologin attempt during the unusually fast live
+# boot. Give the normal attempt time to create the user session, then retry
+# the display manager exactly once if liveuser is still absent.
+attempt=0
+while [ "$attempt" -lt 20 ]; do
+    if /usr/bin/loginctl list-sessions --no-legend 2>/dev/null \
+        | /usr/bin/awk '$3 == "liveuser" { found = 1 } END { exit !found }'; then
+        exit 0
+    fi
+    attempt=$((attempt + 1))
+    sleep 0.25
+done
+
+/usr/bin/logger -t lyra-live-autologin \
+    "initial SDDM autologin did not create a liveuser session; retrying once"
+/usr/bin/systemctl try-restart display-manager.service

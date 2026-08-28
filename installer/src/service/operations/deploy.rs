@@ -39,6 +39,8 @@ const LIVE_ONLY_ARTIFACTS: &[&str] = &[
     "etc/xdg/autostart/lyra-installer-autostart.desktop",
     "etc/xdg/autostart/lyra-plasma-initialize.desktop",
     "usr/libexec/lyra-live-plasma-start",
+    "usr/libexec/lyra-live-sddm-autologin-retry",
+    "usr/lib/systemd/system/lyra-live-autologin-retry.service",
     "usr/bin/lyra-live-smoke",
     // liveuser's passwordless sudo (kiwi/config.sh) - must never survive
     // onto the installed system, which gets its own sudo user with a real

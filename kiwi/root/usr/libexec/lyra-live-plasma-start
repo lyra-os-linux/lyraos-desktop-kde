@@ -22,7 +22,6 @@ if [ ! -e "$state_file" ]; then
     /usr/bin/lookandfeeltool -a org.kde.breeze.desktop --resetLayout || true
     /usr/bin/plasma-apply-wallpaperimage \
         /usr/share/backgrounds/lyra/2702-dawn.png || true
-    /usr/libexec/lyra-plasma-brand-panel || true
     mkdir -p "$state_dir"
     : > "$state_file"
 fi
