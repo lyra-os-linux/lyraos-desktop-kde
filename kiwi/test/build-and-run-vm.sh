@@ -47,6 +47,7 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 KIWI_DESC="$(dirname "$SCRIPT_DIR")"
 REPO_ROOT="$(dirname "$KIWI_DESC")"
 INSTALLER_DIR="$REPO_ROOT/installer"
+VEGA_QT_DIR="$(dirname "$REPO_ROOT")/vega-qt"
 PACKAGE_SIGNING_KEYRING="$KIWI_DESC/keys/obs-package-signing-keyring.asc"
 CURRENT_UID="$(id -u)"
 # Keep enough memory for the live Plasma session and the Rust installer while
@@ -61,6 +62,7 @@ BUILD_ONLY=0
 BOOT_INSTALLED=0
 SECURE_BOOT=0
 USE_LOCAL_INSTALLER=1
+USE_LOCAL_VEGA_QT=1
 PRIVILEGE_TOOL="${LYRA_PRIVILEGE_TOOL:-sudo}"
 
 run_privileged() {
@@ -100,10 +102,9 @@ UEFI somente depois de uma ISO válida estar disponível. Depois da instalação
 reinicie dentro da mesma janela do QEMU para testar o primeiro boot pelo disco
 instalado. --build-only não requer QEMU, KVM, OVMF nem sessão gráfica.
 
-Por padrão, um novo build compila e injeta o binário do instalador deste
-workspace; o Lyra Welcome sempre usa o RPM publicado no OBS, já que vive em
-repositório próprio. --skip-build apenas reinicia a ISO já existente e não
-recompila.
+Por padrão, um novo build compila e injeta o instalador e o Vega Qt dos
+workspaces locais; o Lyra Welcome usa o RPM publicado no OBS. --skip-build
+apenas reinicia a ISO já existente e não recompila.
 EOF
 }
 
@@ -113,7 +114,7 @@ while [ "$#" -gt 0 ]; do
     --skip-build) SKIP_BUILD=1; shift ;;
     --boot-installed) BOOT_INSTALLED=1; shift ;;
     --fresh-disk) shift ;;
-    --published-installer) USE_LOCAL_INSTALLER=0; shift ;;
+    --published-installer) USE_LOCAL_INSTALLER=0; USE_LOCAL_VEGA_QT=0; shift ;;
     --secure-boot) SECURE_BOOT=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown flag: $1" >&2; exit 1 ;;
@@ -365,6 +366,14 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
       fi
     done
   fi
+  if [ "$USE_LOCAL_VEGA_QT" -eq 1 ]; then
+    for command in cmake ninja sha256sum; do
+      if ! command -v "$command" >/dev/null 2>&1; then
+        echo "required local Vega Qt build command not found: $command" >&2
+        exit 1
+      fi
+    done
+  fi
   if [ ! -r "$PACKAGE_SIGNING_KEYRING" ]; then
     echo "required RPM package signing keyring is missing: $PACKAGE_SIGNING_KEYRING" >&2
     exit 1
@@ -487,6 +496,7 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   BUILD_DESCRIPTION="$BUILD_DESCRIPTION_DIR"
   LOCAL_INSTALLER_GUI_SHA256=""
   LOCAL_INSTALLER_SERVICE_SHA256=""
+  LOCAL_VEGA_QT_SHA256=""
   if [ "$USE_LOCAL_INSTALLER" -eq 1 ]; then
     echo "--- compiling current Lyra Installer workspace ---"
     cargo build \
@@ -526,6 +536,25 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
     echo "--- DEVELOPMENT IMAGE: local installer override is not releasable ---"
   else
     echo "--- using published Lyra Installer RPM from OBS ---"
+  fi
+
+  if [ "$USE_LOCAL_VEGA_QT" -eq 1 ]; then
+    echo "--- compiling and adding current Vega Qt workspace ---"
+    cmake -S "$VEGA_QT_DIR" -B "$VEGA_QT_DIR/build" -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release
+    cmake --build "$VEGA_QT_DIR/build" --parallel "$SMP"
+    install -Dm0755 "$VEGA_QT_DIR/build/bin/vega-qt" \
+      "$BUILD_DESCRIPTION_DIR/root/usr/bin/vega-qt"
+    install -Dm0755 "$VEGA_QT_DIR/build/bin/vega-update-notifier-qt" \
+      "$BUILD_DESCRIPTION_DIR/root/usr/bin/vega-update-notifier-qt"
+    install -Dm0644 "$VEGA_QT_DIR/packaging/vega-update-notifier-qt.desktop" \
+      "$BUILD_DESCRIPTION_DIR/root/etc/xdg/autostart/vega-update-notifier-qt.desktop"
+    install -Dm0644 /dev/null \
+      "$BUILD_DESCRIPTION_DIR/root/usr/lib/lyra-os/local-vega-qt-build"
+    LOCAL_VEGA_QT_SHA256="$(sha256sum "$VEGA_QT_DIR/build/bin/vega-qt" | awk '{print $1}')"
+    echo "--- DEVELOPMENT IMAGE: local Vega Qt override is not releasable ---"
+  else
+    echo "--- using published Vega Qt RPM from OBS ---"
   fi
 
 
@@ -573,7 +602,9 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   fi
 
   IMAGE_SDDM_LIVE_CONFIG="$BUILD_DIR/build/image-root/etc/sddm.conf.d/10-lyra-live.conf"
+  IMAGE_SDDM_THEME_CONFIG="$BUILD_DIR/build/image-root/etc/sddm.conf.d/20-lyra-theme.conf"
   IMAGE_SDDM_MAIN_CONFIG="$BUILD_DIR/build/image-root/etc/sddm.conf"
+  IMAGE_DISPLAYMANAGER_SYSCONFIG="$BUILD_DIR/build/image-root/etc/sysconfig/displaymanager"
   IMAGE_PLASMA_SESSION="$BUILD_DIR/build/image-root/usr/share/wayland-sessions/plasmawayland.desktop"
   IMAGE_XORG="$BUILD_DIR/build/image-root/usr/bin/Xorg"
   IMAGE_XORG_LIBINPUT="$BUILD_DIR/build/image-root/usr/lib64/xorg/modules/input/libinput_drv.so"
@@ -586,6 +617,10 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
      ! grep -Fx 'Session=plasmawayland.desktop' "$IMAGE_SDDM_LIVE_CONFIG" >/dev/null ||
      ! grep -Fx 'User=liveuser' "$IMAGE_SDDM_MAIN_CONFIG" >/dev/null ||
      ! grep -Fx 'Session=plasmawayland.desktop' "$IMAGE_SDDM_MAIN_CONFIG" >/dev/null ||
+     ! grep -Fx 'Current=breeze' "$IMAGE_SDDM_THEME_CONFIG" >/dev/null ||
+     ! grep -Fx 'Current=breeze' "$IMAGE_SDDM_MAIN_CONFIG" >/dev/null ||
+     ! grep -Fx 'DISPLAYMANAGER_AUTOLOGIN="liveuser"' \
+        "$IMAGE_DISPLAYMANAGER_SYSCONFIG" >/dev/null ||
      [ ! -s "$IMAGE_PLASMA_SESSION" ] ||
      [ ! -x "$IMAGE_XORG" ] ||
      [ ! -s "$IMAGE_XORG_LIBINPUT" ] ||
@@ -593,6 +628,8 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
      [ ! -f "$IMAGE_LIVEUSER_PASSWORDLESS" ] ||
      ! grep -F 'common-auth-lyra-live' "$IMAGE_SDDM_PAM" >/dev/null ||
      ! grep -E 'pam_unix\.so[[:space:]]+nullok' "$IMAGE_LIVE_COMMON_AUTH" >/dev/null ||
+     ! grep -E '^account[[:space:]]+required[[:space:]]+pam_permit\.so' \
+        "$IMAGE_SDDM_AUTOLOGIN_PAM" >/dev/null ||
      grep -F 'pam_nologin.so' "$IMAGE_SDDM_AUTOLOGIN_PAM" >/dev/null; then
     echo "!!! built image has no valid SDDM/Plasma Wayland autologin chain" >&2
     exit 1
@@ -610,6 +647,7 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   IMAGE_INSTALLER_GUI="$BUILD_DIR/build/image-root/usr/bin/lyra-installer"
   IMAGE_INSTALLER_LOCK="$BUILD_DIR/build/image-root/usr/bin/lyra-install-lock"
   IMAGE_INSTALLER_SERVICE="$BUILD_DIR/build/image-root/usr/libexec/lyra-installer-service"
+  IMAGE_PKEXEC="$BUILD_DIR/build/image-root/usr/bin/pkexec"
   IMAGE_HARDWARE_MATRIX="$BUILD_DIR/build/image-root/usr/bin/lyra-hardware-matrix"
   IMAGE_LIVE_SMOKE="$BUILD_DIR/build/image-root/usr/bin/lyra-live-smoke"
   IMAGE_SYSTEM_SMOKE="$BUILD_DIR/build/image-root/usr/bin/lyra-system-smoke"
@@ -624,10 +662,12 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   IMAGE_AUTOLOGIN_RETRY_LINK="$BUILD_DIR/build/image-root/etc/systemd/system/graphical.target.wants/lyra-live-autologin-retry.service"
   IMAGE_INSTALLER_LAUNCHER="$BUILD_DIR/build/image-root/usr/share/applications/org.lyraos.LyraInstaller.desktop"
   IMAGE_INSTALLER_ICON="$BUILD_DIR/build/image-root/usr/share/icons/hicolor/256x256/apps/org.lyraos.LyraInstaller.png"
+  IMAGE_VEGA_QT="$BUILD_DIR/build/image-root/usr/bin/vega-qt"
   for INSTALLER_EXECUTABLE in \
       "$IMAGE_INSTALLER_GUI" \
       "$IMAGE_INSTALLER_LOCK" \
       "$IMAGE_INSTALLER_SERVICE" \
+      "$IMAGE_PKEXEC" \
       "$IMAGE_LIVE_PLASMA_START" \
       "$IMAGE_AUTOLOGIN_RETRY" \
       "$IMAGE_HARDWARE_MATRIX" \
@@ -679,7 +719,7 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
      ! grep -Fx 'Exec=/usr/libexec/lyra-live-plasma-start' \
         "$IMAGE_PLASMA_INITIALIZE_AUTOSTART" >/dev/null ||
      ! grep -F 'kscreen-doctor -o' "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
-     ! grep -F 'lookandfeeltool -a org.kde.breeze.desktop --resetLayout' \
+     ! grep -F 'lookandfeeltool -a org.kde.breezedark.desktop --resetLayout' \
         "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
      ! grep -F 'writeConfig("icon", "lyra-launcher")' \
         "$IMAGE_KICKOFF_SETUP" >/dev/null ||
@@ -699,6 +739,18 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
     echo "!!! built image is missing the Lyra Installer launcher or icon" >&2
     exit 1
   fi
+  if [ "$USE_LOCAL_VEGA_QT" -eq 1 ]; then
+    IMAGE_VEGA_QT_SHA256="$(sha256sum "$IMAGE_VEGA_QT" | awk '{print $1}')"
+    if [ "$IMAGE_VEGA_QT_SHA256" != "$LOCAL_VEGA_QT_SHA256" ] ||
+       [ ! -f "$BUILD_DIR/build/image-root/usr/lib/lyra-os/local-vega-qt-build" ]; then
+      echo "!!! built image did not preserve the current local Vega Qt binary" >&2
+      exit 1
+    fi
+    if [ ! -x "$BUILD_DIR/build/image-root/usr/bin/vega-update-notifier-qt" ] ||
+       [ ! -f "$BUILD_DIR/build/image-root/etc/xdg/autostart/vega-update-notifier-qt.desktop" ]; then
+      die "local Vega Qt update notifier/autostart missing from image"
+    fi
+  fi
   if ! grep -Fx 'TryExec=/usr/bin/lyra-installer' "$IMAGE_INSTALLER_LAUNCHER" >/dev/null ||
      ! grep -Fx 'Exec=/usr/bin/lyra-install-lock /usr/bin/lyra-installer' \
         "$IMAGE_INSTALLER_LAUNCHER" >/dev/null ||
@@ -713,7 +765,9 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   fi
   echo "--- validated Lyra Installer executable and Plasma autostart chain ---"
 
-  BUILT_ISO="$(run_privileged find "$BUILD_DIR" -maxdepth 1 -type f -name '*.iso' -print -quit)"
+  # KIWI exports the result world-readable (normally owned by nobody), so
+  # discovering it must not trigger a second polkit prompt after a long build.
+  BUILT_ISO="$(find "$BUILD_DIR" -maxdepth 1 -type f -name '*.iso' -print -quit)"
   if [ -z "$BUILT_ISO" ]; then
     echo "!!! kiwi-ng reported success but no .iso found under $BUILD_DIR"
     exit 1

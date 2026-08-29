@@ -66,6 +66,10 @@ suseInsertService lyra-live-autologin-retry
 
 # Plasma display manager
 baseUpdateSysConfig /etc/sysconfig/displaymanager DISPLAYMANAGER sddm
+# Leap starts SDDM through display-manager-legacy.service.  Its wrapper uses
+# this sysconfig value to enable autologin; the native sddm.conf entry alone is
+# not sufficient on the distribution-managed path.
+baseUpdateSysConfig /etc/sysconfig/displaymanager DISPLAYMANAGER_AUTOLOGIN liveuser
 # Leap's display-manager-legacy.service reads DISPLAYMANAGER above. Enabling
 # sddm.service directly conflicts with the distribution-managed alias.
 
@@ -103,8 +107,11 @@ EOF
 # The distribution's common-auth intentionally rejects empty passwords. The
 # live account is the sole exception: allow its deliberately empty password
 # at SDDM, while leaving every other PAM consumer on the Leap defaults.
-# Also omit pam_nologin from the live autologin service: SDDM can attempt its
-# one-shot login while systemd is still completing the boot transition.
+# The distribution common-account stack rejects KIWI's live account before
+# SDDM can start the session, even though authentication itself is explicitly
+# permitted.  The autologin PAM service is live-only and fixed to liveuser, so
+# permit its account phase as well.  Also omit pam_nologin because SDDM can
+# attempt its one-shot login while systemd is still completing boot.
 # All three overrides are removed from the installed target by the installer.
 mkdir -p /etc/pam.d
 sed 's/pam_unix\.so[[:space:]]\+try_first_pass/pam_unix.so nullok try_first_pass/' \
@@ -113,6 +120,9 @@ sed 's/substack[[:space:]]\+common-auth/substack       common-auth-lyra-live/' \
     /usr/lib/pam.d/sddm > /etc/pam.d/sddm
 sed '/pam_nologin\.so/d' /usr/lib/pam.d/sddm-autologin \
     > /etc/pam.d/sddm-autologin
+sed -i \
+    's/account[[:space:]]\+substack[[:space:]]\+common-account/account  required       pam_permit.so/' \
+    /etc/pam.d/sddm-autologin
 chmod 0644 \
     /etc/pam.d/common-auth-lyra-live \
     /etc/pam.d/sddm \

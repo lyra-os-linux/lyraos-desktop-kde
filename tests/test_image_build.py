@@ -105,15 +105,50 @@ class ImagePolicyTests(unittest.TestCase):
             (ROOT / "kiwi/root/etc/xdg/autostart/lyra-plasma-brand-panel.desktop").exists()
         )
 
-    def test_live_sddm_has_one_shot_autologin_recovery(self) -> None:
+    def test_breeze_theme_variants_keep_panel_and_wallpaper_on_screen(self) -> None:
+        look_and_feel = ROOT / "kiwi/root/usr/share/plasma/look-and-feel"
+        for theme in (
+            "org.kde.breeze.desktop",
+            "org.kde.breezedark.desktop",
+            "org.kde.breezetwilight.desktop",
+        ):
+            layout = (
+                look_and_feel
+                / theme
+                / "contents/layouts/org.kde.plasma.desktop-layout.js"
+            ).read_text(encoding="utf-8")
+            self.assertIn('loadTemplate("org.kde.plasma.desktop.defaultPanel")', layout)
+            self.assertIn("panelList[panelIndex].screen = 0", layout)
+            self.assertIn("file:///usr/share/backgrounds/lyra/2702-dawn.png", layout)
+
+    def test_live_sddm_autologin_permits_live_account(self) -> None:
+        config = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
+
+        self.assertIn("account  required       pam_permit.so", config)
+        self.assertIn("suseInsertService lyra-live-autologin-retry", config)
+        self.assertIn(
+            "DISPLAYMANAGER_AUTOLOGIN liveuser",
+            config,
+        )
+
+    def test_installer_image_includes_split_pkexec_runtime(self) -> None:
+        image = (ROOT / "kiwi/config.xml").read_text(encoding="utf-8")
+        spec = (ROOT / "installer/packaging/lyra-installer.spec").read_text(
+            encoding="utf-8"
+        )
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('<package name="pkexec"/>', image)
+        self.assertIn("Requires:       pkexec", spec)
+        self.assertIn('IMAGE_PKEXEC="$BUILD_DIR/build/image-root/usr/bin/pkexec"', helper)
+
+    def test_live_sddm_retries_once_after_early_boot_failure(self) -> None:
         retry = ROOT / "kiwi/root/usr/libexec/lyra-live-sddm-autologin-retry"
         unit = (
             ROOT
             / "kiwi/root/usr/lib/systemd/system/lyra-live-autologin-retry.service"
-        ).read_text(encoding="utf-8")
-        config = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
-        deploy = (
-            ROOT / "installer/src/service/operations/deploy.rs"
         ).read_text(encoding="utf-8")
 
         self.assertTrue(retry.stat().st_mode & stat.S_IXUSR)
@@ -123,8 +158,6 @@ class ImagePolicyTests(unittest.TestCase):
         self.assertIn("lyra-live-sddm-autologin-retried", retry_script)
         self.assertIn("After=display-manager.service", unit)
         self.assertIn("WantedBy=graphical.target", unit)
-        self.assertIn("suseInsertService lyra-live-autologin-retry", config)
-        self.assertIn("lyra-live-autologin-retry.service", deploy)
 
     def test_canonical_sources_pass_repository_and_signature_policy(self) -> None:
         image_build.validate_sources(self.manifest)
@@ -230,6 +263,19 @@ class ImagePolicyTests(unittest.TestCase):
         defaults = ROOT / "kiwi/root/usr/share/fish/vendor_conf.d/lyra-defaults.fish"
         self.assertTrue(prompt.is_file())
         self.assertTrue(defaults.is_file())
+
+    def test_fastfetch_uses_lyra_branding_without_gnome_theme(self) -> None:
+        config_path = ROOT / "kiwi/root/etc/skel/.config/fastfetch/config.jsonc"
+        logo_path = ROOT / "kiwi/root/usr/share/lyra-os/fastfetch/logo.txt"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(config["logo"]["type"], "file")
+        self.assertEqual(
+            config["logo"]["source"], "/usr/share/lyra-os/fastfetch/logo.txt"
+        )
+        logo = logo_path.read_text(encoding="utf-8")
+        self.assertIn("$1█", logo)
+        self.assertIn("$2──────────────────────────", logo)
 
         deploy = (
             ROOT / "installer/src/service/operations/deploy.rs"
@@ -475,11 +521,13 @@ class ImagePolicyTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("gnome-software", language_remediation)
 
-    def test_gnome_grub_theme_is_not_required_by_kde_build(self) -> None:
+    def test_installed_grub_theme_is_conditional_per_desktop_edition(self) -> None:
         deploy = (ROOT / "installer/src/service/operations/deploy.rs").read_text(
             encoding="utf-8"
         )
-        self.assertIn('"/usr/share/grub/themes/Lyra-OS/theme.txt"', deploy)
+        self.assertIn("GRUB_THEME_PATH", deploy)
+        self.assertIn("if theme.is_file()", deploy)
+        self.assertIn('if key == "GRUB_THEME" && !theme.is_file()', deploy)
         root = ET.parse(ROOT / "kiwi/config.xml").getroot()
         build_type = root.find("preferences/type")
         self.assertIsNotNone(build_type)
@@ -487,11 +535,8 @@ class ImagePolicyTests(unittest.TestCase):
         hook_path = ROOT / "kiwi/edit_boot_config.sh"
         self.assertNotEqual(hook_path.stat().st_mode & 0o111, 0)
         hook = hook_path.read_text(encoding="utf-8")
-        self.assertIn("GRUB_THEME_ASSET=usr/share/grub/themes/Lyra-OS/theme.txt", hook)
-        self.assertIn('GRUB_THEME="/usr/share/grub/themes/Lyra-OS/theme.txt"', hook)
-        # The hook must be conditional on the theme asset existing, not
-        # assume it is always present.
-        self.assertIn('if [ -s "$GRUB_THEME_ASSET" ]; then', hook)
+        self.assertIn("sed -i '/^[[:space:]]*GRUB_THEME=/d'", hook)
+        self.assertNotIn("GRUB_THEME_ASSET", hook)
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
         self.assertNotIn("IMAGE_INSTALLED_GRUB_THEME", helper)
         self.assertIn('"$KIWI_DESC/edit_boot_config.sh"', helper)
@@ -619,10 +664,11 @@ class ImagePolicyTests(unittest.TestCase):
         ):
             self.assertIn(path, deploy)
         self.assertIn("pam_unix.so nullok try_first_pass", config)
+        self.assertIn("account  required       pam_permit.so", config)
         self.assertIn("common-auth-lyra-live", helper)
         self.assertIn("pam_nologin.so", helper)
 
-    def test_live_plasma_waits_for_screen_before_creating_default_layout(self) -> None:
+    def test_first_plasma_login_waits_for_screen_before_creating_default_layout(self) -> None:
         startup = (
             ROOT / "kiwi/root/usr/libexec/lyra-live-plasma-start"
         ).read_text(encoding="utf-8")
@@ -635,10 +681,16 @@ class ImagePolicyTests(unittest.TestCase):
 
         self.assertIn("kscreen-doctor -o", startup)
         self.assertIn("--resetLayout", startup)
+        self.assertIn("org.kde.breezedark.desktop", startup)
         self.assertIn("plasma-apply-wallpaperimage", startup)
         self.assertIn("2702-dawn.png", startup)
+        self.assertIn("plasma-initialized", startup)
         self.assertIn("Exec=/usr/libexec/lyra-live-plasma-start", autostart)
-        self.assertIn("usr/libexec/lyra-live-plasma-start", deploy)
+        live_only = deploy.split("const LIVE_ONLY_ARTIFACTS", 1)[1].split("];", 1)[0]
+        self.assertNotIn('"usr/libexec/lyra-live-plasma-start",', live_only)
+        self.assertNotIn(
+            '"etc/xdg/autostart/lyra-plasma-initialize.desktop",', live_only
+        )
 
     def test_kde_image_uses_native_lyra_sddm_theme(self) -> None:
         theme = ROOT / "kiwi/root/usr/share/sddm/themes/lyra"

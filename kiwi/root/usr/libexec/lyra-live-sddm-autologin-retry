@@ -6,9 +6,9 @@ marker=/run/lyra-live-sddm-autologin-retried
 [ -e "$marker" ] && exit 0
 : > "$marker"
 
-# SDDM can lose its first autologin attempt during the unusually fast live
-# boot. Give the normal attempt time to create the user session, then retry
-# the display manager exactly once if liveuser is still absent.
+# The first SDDM autologin can race the unusually fast live boot.  Give it
+# time to create a real liveuser session, then restart the display manager
+# exactly once.  The live-only PAM stack permits the account on this retry.
 attempt=0
 while [ "$attempt" -lt 20 ]; do
     if /usr/bin/loginctl list-sessions --no-legend 2>/dev/null \

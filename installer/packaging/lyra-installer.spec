@@ -45,9 +45,9 @@ Requires:       grub2-common
 Requires:       lvm2
 Requires:       mdadm
 # polkit ships the action/rule loader this package's .policy/.rules need at
-# runtime; no polkit *library* is linked (lyra-installer-service shells out
-# to pkexec's caller side, not libpolkit).
+# runtime; Leap 16.1 ships the pkexec client in its own package.
 Requires:       polkit
+Requires:       pkexec
 Requires:       shadow
 Requires:       shim
 Requires:       snapper

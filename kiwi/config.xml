@@ -295,6 +295,9 @@
     <!-- The Rust installer's privileged service is authorized separately;
          the graphical process continues to run as liveuser. -->
     <package name="polkit"/>
+    <!-- Leap 16.1 splits the pkexec client out of polkit. The installer uses
+         it to launch its narrowly scoped privileged service. -->
+    <package name="pkexec"/>
 
     <!-- Plasma 6 desktop base. Desktop integrations that are only
          recommendations remain explicit because the image uses

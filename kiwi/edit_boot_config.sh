@@ -16,27 +16,11 @@ if [ "${2:-}" != "1" ]; then
 fi
 
 GRUB_DEFAULTS=etc/default/grub
-GRUB_THEME_ASSET=usr/share/grub/themes/Lyra-OS/theme.txt
 if [ ! -f "$GRUB_DEFAULTS" ]; then
   echo "Missing GRUB defaults: /$GRUB_DEFAULTS" >&2
   exit 1
 fi
 
-# Guard on the asset actually being present instead of hard-requiring it,
-# so this hook is a no-op rather than a failure if lyra-os-theme is ever
-# absent from a build.
-if [ -s "$GRUB_THEME_ASSET" ]; then
-  # KIWI's live bootloader writer uses /boot/grub2/themes for the ISO menu
-  # and can overwrite the value previously written by the theme RPM/config.sh.
-  # The rootfs copied to the installed disk instead owns the theme below
-  # /usr/share.
-  sed -i '/^[[:space:]]*GRUB_THEME=/d' "$GRUB_DEFAULTS"
-  cat >> "$GRUB_DEFAULTS" <<'EOF'
-
-# Lyra installed-system theme; the live ISO has its own /boot layout.
-GRUB_THEME="/usr/share/grub/themes/Lyra-OS/theme.txt"
-EOF
-
-  grep -Fx 'GRUB_THEME="/usr/share/grub/themes/Lyra-OS/theme.txt"' \
-    "$GRUB_DEFAULTS" >/dev/null
-fi
+# The installed system uses GRUB's default appearance. Remove theme paths
+# inherited from a desktop-specific package or KIWI's live boot layout.
+sed -i '/^[[:space:]]*GRUB_THEME=/d' "$GRUB_DEFAULTS"
