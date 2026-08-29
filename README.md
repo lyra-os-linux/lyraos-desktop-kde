@@ -1,10 +1,9 @@
 # Lyra OS
 
-> [!WARNING]
-> Este repositório inicia o flavor KDE experimental do Lyra OS. Sua árvore
-> ainda preserva o histórico da edição GNOME usada como base e não representa
-> uma imagem KDE funcional. A primeira Alpha será reduzida à pilha KDE da base,
-> sem pacotes próprios do Lyra.
+> [!IMPORTANT]
+> O KDE é um flavor oficial do Lyra OS. Este repositório preserva parte do
+> histórico da edição GNOME usada como base, mas mantém imagem, integração e
+> gates de qualidade próprios para o Plasma.
 
 Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16,
 voltada a uma experiência GNOME simples, estável e integrada ao ecossistema
