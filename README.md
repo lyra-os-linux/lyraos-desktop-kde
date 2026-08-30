@@ -8,7 +8,7 @@
 Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16.1,
 voltada a uma experiência KDE Plasma simples, estável e integrada ao ecossistema
 Lyra. Este repositório contém a descrição KIWI usada para gerar a ISO live e
-o instalador da edição **Odisseia 27.02 Alpha 7** para computadores x86_64.
+o instalador da edição **Odisseia 1.0 Alpha 7** para computadores x86_64.
 
 O projeto mantém também as edições
 [GNOME](https://github.com/lyra-os-linux/lyraos-desktop) e
@@ -73,9 +73,9 @@ decisões de implementação, limitações e verificações já realizadas.
 ## Ciclo atual e próximos ciclos
 
 A estabilização conjunta de GNOME, KDE Plasma e XFCE segue até 28 de setembro
-de 2026. A versão 27.02 terá o Lyra Installer em `en-US`, `pt-BR` e `es-ES`,
+de 2026. A versão 1.0 terá o Lyra Installer em `en-US`, `pt-BR` e `es-ES`,
 com inglês como padrão e fallback. Os demais pacotes próprios continuam com
-o gate integral em `en-US`/`pt-BR`; sua ampliação fica para a versão 27.10. O cronograma e os
+o gate integral em `en-US`/`pt-BR`; sua ampliação fica para uma release futura. O cronograma e os
 gates estão registrados no [roadmap do projeto](docs/roadmap.md).
 
 ## Preparando o ambiente

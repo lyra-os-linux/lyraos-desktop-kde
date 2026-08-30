@@ -819,7 +819,7 @@ class ArtifactTests(unittest.TestCase):
         path = directory / "release-alpha8.toml"
         path.write_text(
             """[release]
-calendar_version = "27.02"
+version = "1.0"\nbase_distribution = "opensuse-leap"\nbase_version = "16.1"
 stage = "alpha"
 iteration = 8
 codename = "Odisseia"
@@ -958,8 +958,8 @@ architecture = "x86_64"
             "phase": "rollback-verified",
             "checks": [{"id": "successor", "status": "passed"}],
             "facts": {
-                "baseline_version": "27.02",
-                "target_version": "27.10",
+                "baseline_version": "1.0",
+                "target_version": "1.0.1",
                 "manifest_signature_verified": True,
                 "offline_applied": True,
                 "reboot_count": 2,

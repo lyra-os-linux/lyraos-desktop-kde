@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the Lyra 27.02 localization inventory against OBS policy."""
+"""Validate the Lyra 1.0 localization inventory against OBS policy."""
 
 from __future__ import annotations
 

@@ -20,7 +20,7 @@ nova não apaga a anterior: cria outro ADR que a substitui e aponta para ela.
 | [0013](0013-zed-editor-baseline-package.md) | Zed passa a ser empacotado (zededitor) e instalado por padrão na ISO | Aceita |
 | [0014](0014-vscode-repository-registration-only.md) | VS Code entra só como registro do repositório oficial da Microsoft (vscode-repo) | Aceita |
 | [0015](0015-optional-android-windows-compatibility.md) | Compatibilidade Android e Windows permanece opcional e desacoplada da ISO | Substituída pela ADR 0016 |
-| [0016](0016-defer-android-windows-next-release.md) | Compatibilidade Android e Windows é adiada para o ciclo 28.02 | Aceita |
+| [0016](0016-defer-android-windows-next-release.md) | Compatibilidade Android e Windows é adiada para o release futura | Aceita |
 
 Mudanças incompatíveis no formato do plano precisam incrementar
 `INSTALL_PLAN_SCHEMA_VERSION`, atualizar o ADR 0002 por meio de um novo ADR e

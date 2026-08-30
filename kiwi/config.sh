@@ -18,8 +18,8 @@ fi
 # shellcheck source=/dev/null
 . "$RELEASE_METADATA"
 
-if [ "$kiwi_iversion" != "$LYRA_VERSION_ID" ]; then
-    echo "KIWI version $kiwi_iversion does not match $LYRA_VERSION_ID" >&2
+if [ "$kiwi_iversion" != "$LYRA_ARTIFACT_VERSION" ]; then
+    echo "KIWI version $kiwi_iversion does not match $LYRA_ARTIFACT_VERSION" >&2
     exit 1
 fi
 
@@ -37,6 +37,11 @@ LYRA_IMAGE_BUILT_AT="${LYRA_IMAGE_BUILT_AT:-unknown}"
 LYRA_BUILD_SOURCE_DIRTY="${LYRA_BUILD_SOURCE_DIRTY:-unknown}"
 if ! [[ "$LYRA_BUILD_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
     LYRA_BUILD_SOURCE_COMMIT=unknown
+fi
+if [[ "$LYRA_BUILD_SOURCE_EPOCH" =~ ^[0-9]+$ ]]; then
+    LYRA_BUILD_ID="$(date -u -d "@$LYRA_BUILD_SOURCE_EPOCH" +%Y%m%d)"
+else
+    LYRA_BUILD_ID="$(date -u +%Y%m%d)"
 fi
 if [[ "$LYRA_BUILD_SOURCE_DIRTY" != 0 && "$LYRA_BUILD_SOURCE_DIRTY" != 1 ]]; then
     LYRA_BUILD_SOURCE_DIRTY=unknown
@@ -228,9 +233,9 @@ ID_LIKE="opensuse suse"
 VERSION="$LYRA_VERSION_NAME"
 VERSION_ID="$LYRA_VERSION_ID"
 VERSION_CODENAME="$LYRA_CODENAME_ID"
-BUILD_ID="$LYRA_VERSION_ID"
+BUILD_ID="$LYRA_BUILD_ID"
 IMAGE_ID="$LYRA_IMAGE_NAME"
-IMAGE_VERSION="$LYRA_VERSION_ID"
+IMAGE_VERSION="$LYRA_ARTIFACT_VERSION"
 CPE_NAME="cpe:/o:rodrigosbrito:lyra_os:$LYRA_VERSION_ID"
 EOF
 

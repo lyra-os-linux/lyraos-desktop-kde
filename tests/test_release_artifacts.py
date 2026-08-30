@@ -20,9 +20,9 @@ class ReleaseArtifactsTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        self.iso = self.root / "lyra-os.x86_64-27.02-beta2.iso"
+        self.iso = self.root / "lyra-os-1.0-beta.2-x86_64.iso"
         self.iso.write_bytes(b"fake iso payload")
-        self.packages = self.root / "lyra-os.x86_64-27.02-beta2.packages"
+        self.packages = self.root / "lyra-os-1.0-beta.2.packages"
         self.packages.write_text(
             "fina|(none)|0.4.0|12.1|x86_64|obs://build.opensuse.org/"
             "home:rodrigosbrito:fina/repo/revision-fina|MIT\n"
@@ -30,7 +30,7 @@ class ReleaseArtifactsTests(unittest.TestCase):
             "openSUSE:Leap:16.0/standard/revision-leap|MIT\n",
             encoding="utf-8",
         )
-        self.verified = self.root / "lyra-os.x86_64-27.02-beta2.verified"
+        self.verified = self.root / "lyra-os-1.0-beta.2.verified"
         self.verified.write_text("verified\n", encoding="utf-8")
         self.output_dir = self.root / "out"
 
@@ -103,7 +103,7 @@ class ReleaseArtifactsTests(unittest.TestCase):
     def test_release_file_and_product_are_overridable(self) -> None:
         release_file = self.root / "release-alternate.toml"
         release_file.write_text(
-            'schema = 1\n\n[release]\ncalendar_version = "27.02"\nstage = "alpha"\n'
+            'schema = 1\n\n[release]\nversion = "1.0"\nbase_distribution = "opensuse-leap"\nbase_version = "16.1"\nstage = "alpha"\n'
             'iteration = 1\nimage_name = "lyra-os-alternate"\narchitecture = "x86_64"\n',
             encoding="utf-8",
         )
@@ -119,7 +119,7 @@ class ReleaseArtifactsTests(unittest.TestCase):
         report = next(p for p in paths if p.suffix == ".report")
         document = json.loads(report.read_text(encoding="utf-8"))
         self.assertEqual(document["product"], "Lyra OS Alternate")
-        self.assertEqual(document["version"], "27.02-alpha1")
+        self.assertEqual(document["version"], "1.0-alpha.1")
         self.assertIsNone(document["codename"])
 
 

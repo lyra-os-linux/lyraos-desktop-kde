@@ -60,8 +60,8 @@ def release_values(release_file: Path = RELEASE) -> dict[str, object]:
 def version_id(release_file: Path = RELEASE) -> str:
     release = release_values(release_file)
     if release["stage"] == "release":
-        return str(release["calendar_version"])
-    return f'{release["calendar_version"]}-{release["stage"]}{release["iteration"]}'
+        return str(release["version"])
+    return f'{release["version"]}-{release["stage"]}.{release["iteration"]}'
 
 
 def commit_identity(commit: str) -> tuple[str, int, str]:

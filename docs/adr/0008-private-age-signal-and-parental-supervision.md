@@ -142,7 +142,7 @@ estado e bloqueia alteração. Remover o pacote não apaga política ou recupera
 
 O desenho minimiza dados, mantém enforcement fora da GUI e permite trocar
 adaptadores. Em contrapartida, exige serviço, autorização fina, qualificação de
-malcontent e testes extensos. A funcionalidade pode ser adiada da 27.02 se as
+malcontent e testes extensos. A funcionalidade pode ser adiada da 1.0 se as
 dependências jurídicas/upstream não fecharem antes do congelamento.
 
 ## Gate de aprovação

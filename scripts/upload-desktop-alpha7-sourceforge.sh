@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-export LYRA_EXPECTED_VERSION="27.02-alpha7"
+export LYRA_EXPECTED_VERSION="1.0-alpha.7"
 export LYRA_RELEASE_LABEL="Desktop Alpha 7"
 export LYRA_RELEASE_SLUG="alpha7"
 export LYRA_COMMAND_NAME="$0"

@@ -19,7 +19,7 @@ LOADER.exec_module(system_smoke)
 class SystemSmokeTests(unittest.TestCase):
     def create_installed_root(self, root: Path) -> None:
         files = {
-            "usr/lib/lyra-os/release": "VERSION_ID=27.02-beta2\n",
+            "usr/lib/lyra-os/release": "VERSION_ID=1.0-beta.2\n",
             "usr/lib/lyra-os/build-info": "LYRA_SOURCE_COMMIT=fixture\n",
             "etc/machine-id": "0123456789abcdef0123456789abcdef\n",
             "boot/grub2/grub.cfg": "menuentry 'Lyra OS' {}\n",

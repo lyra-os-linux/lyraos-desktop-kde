@@ -2,7 +2,7 @@
 
 Status: resultado técnico da #6  
 Data da consulta: 18/08/2026  
-Alvo original: Lyra OS Desktop 27.02, openSUSE Leap 16.0, x86_64
+Alvo original: Lyra OS Desktop 1.0, openSUSE Leap 16.0, x86_64
 
 > Esta qualificação registra a decisão tomada sobre a base 16.0. A migração
 > para Leap 16.1 exige repetir a consulta de disponibilidade e os testes antes
@@ -12,7 +12,7 @@ Alvo original: Lyra OS Desktop 27.02, openSUSE Leap 16.0, x86_64
 
 `malcontent` é o candidato upstream preferencial para política de aplicativos
 e integração com AccountsService/OARS. Ele **não está qualificado para entrar
-na imagem da versão 27.02 neste momento**, porque não há pacote oficial para
+na imagem da versão 1.0 neste momento**, porque não há pacote oficial para
 openSUSE Leap 16.0. O portal oficial lista somente pacote comunitário 0.12.0
 para Leap; Tumbleweed possui 0.13.1 oficial.
 

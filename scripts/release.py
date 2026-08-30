@@ -21,7 +21,9 @@ RELEASE_FILE = REPOSITORY / "release.toml"
 
 @dataclasses.dataclass(frozen=True)
 class Release:
-    calendar_version: str
+    product_version: str
+    base_distribution: str
+    base_version: str
     stage: str
     iteration: int
     codename: str
@@ -36,7 +38,9 @@ class Release:
         try:
             values = document["release"]
             release = cls(
-                calendar_version=values["calendar_version"],
+                product_version=values["version"],
+                base_distribution=values["base_distribution"],
+                base_version=values["base_version"],
                 stage=values["stage"],
                 iteration=values.get("iteration", 0),
                 codename=values["codename"],
@@ -51,7 +55,9 @@ class Release:
 
     def validate(self) -> None:
         scalar_fields = {
-            "calendar_version": self.calendar_version,
+            "product_version": self.product_version,
+            "base_distribution": self.base_distribution,
+            "base_version": self.base_version,
             "stage": self.stage,
             "codename": self.codename,
             "codename_id": self.codename_id,
@@ -62,8 +68,12 @@ class Release:
             raise ValueError("release text fields must be strings")
         if isinstance(self.iteration, bool) or not isinstance(self.iteration, int):
             raise ValueError("iteration must be an integer")
-        if not re.fullmatch(r"\d{2}\.(?:0[1-9]|1[0-2])", self.calendar_version):
-            raise ValueError("calendar_version must use YY.MM")
+        if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))?", self.product_version):
+            raise ValueError("version must use MAJOR.MINOR or MAJOR.MINOR.PATCH")
+        if self.base_distribution != "opensuse-leap":
+            raise ValueError("base_distribution must be opensuse-leap")
+        if not re.fullmatch(r"\d+\.\d+", self.base_version):
+            raise ValueError("base_version must use MAJOR.MINOR")
         if self.stage not in {"alpha", "beta", "rc", "release"}:
             raise ValueError("stage must be alpha, beta, rc, or release")
         if self.stage == "release" and self.iteration != 0:
@@ -74,16 +84,16 @@ class Release:
             raise ValueError("codename must be a display-safe identifier")
         if not re.fullmatch(r"[a-z][a-z0-9-]*", self.codename_id):
             raise ValueError("codename_id must be lowercase and machine-safe")
-        if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", self.image_name):
-            raise ValueError("image_name must be machine-safe")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]*", self.image_name):
+            raise ValueError("image_name must be filename-safe")
         if not re.fullmatch(r"[A-Za-z0-9_]+", self.architecture):
             raise ValueError("architecture must be machine-safe")
 
     @property
     def version_id(self) -> str:
         if self.stage == "release":
-            return self.calendar_version
-        return f"{self.calendar_version}-{self.stage}{self.iteration}"
+            return self.product_version
+        return f"{self.product_version}-{self.stage}.{self.iteration}"
 
     @property
     def stage_label(self) -> str:
@@ -95,8 +105,8 @@ class Release:
     @property
     def display_version(self) -> str:
         if self.stage == "release":
-            return self.calendar_version
-        return f"{self.calendar_version} {self.stage_label}"
+            return self.product_version
+        return f"{self.product_version} {self.stage_label}"
 
     @property
     def pretty_name(self) -> str:
@@ -123,19 +133,21 @@ class Release:
 
     @property
     def iso_filename(self) -> str:
-        return f"{self.image_name}.{self.architecture}-{self.version_id}.iso"
+        return f"{self.image_name}-{self.version_id}-{self.architecture}.iso"
 
     @property
     def specification(self) -> str:
         return (
             f'Lyra OS "{self.codename}" {self.display_version} - live/installer ISO, '
-            f"openSUSE Leap 16 base, KDE Plasma desktop, {self.architecture}"
+            f"openSUSE Leap {self.base_version} base, KDE Plasma desktop, {self.architecture}"
         )
 
     def fields(self) -> dict[str, str]:
         return {
             "architecture": self.architecture,
-            "calendar_version": self.calendar_version,
+            "product_version": self.product_version,
+            "base_distribution": self.base_distribution,
+            "base_version": self.base_version,
             "codename": self.codename,
             "codename_id": self.codename_id,
             "display_version": self.display_version,
@@ -169,7 +181,10 @@ def shell_value(value: str) -> str:
 def release_environment(release: Release) -> str:
     values = {
         "LYRA_ARCHITECTURE": release.architecture,
-        "LYRA_CALENDAR_VERSION": release.calendar_version,
+        "LYRA_ARTIFACT_VERSION": release.version_id,
+        "LYRA_PRODUCT_VERSION": release.product_version,
+        "LYRA_BASE_DISTRIBUTION": release.base_distribution,
+        "LYRA_BASE_VERSION": release.base_version,
         "LYRA_CODENAME": release.codename,
         "LYRA_CODENAME_ID": release.codename_id,
         "LYRA_DISPLAY_VERSION": release.display_version,
@@ -180,7 +195,7 @@ def release_environment(release: Release) -> str:
         "LYRA_RELEASE_ITERATION": str(release.iteration),
         "LYRA_RELEASE_TAG": release.tag,
         "LYRA_STAGE_LABEL": release.stage_label,
-        "LYRA_VERSION_ID": release.version_id,
+        "LYRA_VERSION_ID": release.product_version,
         "LYRA_VERSION_NAME": release.version_name,
         "LYRA_VOLUME_ID": release.volume_id,
     }
@@ -213,6 +228,12 @@ def render_files(release: Release) -> dict[Path, str]:
         xml,
         r'volid="[^"]+"',
         f'volid="{release.volume_id}"',
+        xml_path,
+    )
+    xml = replace_once(
+        xml,
+        r"^[ \t]*<specification>[^<]+</specification>$",
+        f"    <specification>{release.specification}</specification>",
         xml_path,
     )
     rendered[xml_path] = xml
@@ -296,6 +317,9 @@ def write_build_manifest(release: Release, iso: Path, output: Path | None) -> in
         "schema_version": 1,
         "product": "Lyra OS",
         "version": release.version_id,
+        "product_version": release.product_version,
+        "base_distribution": release.base_distribution,
+        "base_version": release.base_version,
         "channel": release.stage,
         "channel_iteration": release.iteration,
         "codename": release.codename,

@@ -11,7 +11,7 @@ estágio de release.
 ## Estado da linha de base
 
 **Data:** 2026-08-19  
-**Produto avaliado:** Lyra OS Desktop 27.02 Alpha 6
+**Produto avaliado:** Lyra OS Desktop 1.0 Alpha 6
 **Resultado:** **6,4/10 — promissor, mas ainda não recomendado para produção**
 
 A nota atual é limitada pela maturidade comprovada. A arquitetura e o processo
@@ -99,8 +99,8 @@ e [notas do openSUSE Leap 16](https://doc.opensuse.org/release-notes/x86_64/open
 | Alpha 6 atual | 6,0 | nenhum P0; P1 documentado e bloqueante para publicação |
 | Beta 1 | 7,0 | assinatura da ISO, matriz mínima ampliada e nenhum P0/P1 aberto |
 | RC | 7,8 | rollback, atualização, Secure Boot e hardware suportado repetidos no candidato |
-| Lyra OS 27.02 | 8,0 | upgrade entre releases, publicação reproduzível, suporte definido e evidência longitudinal |
-| 27.10 ou posterior | 8,5 | redundância operacional, mais hardware, menor risco residual e comunidade ativa |
+| Lyra OS 1.0 | 8,0 | upgrade entre releases, publicação reproduzível, suporte definido e evidência longitudinal |
+| release futura qualificada | 8,5 | redundância operacional, mais hardware, menor risco residual e comunidade ativa |
 
 As metas não autorizam reduzir os critérios do release gate para alcançar uma
 data. Um bloqueador P0/P1 mantém o resultado NO-GO independentemente da média.
@@ -134,7 +134,7 @@ Antes de revisar a pontuação:
 
 | Data | Versão | Nota | Mudança principal | Evidência |
 |---|---|---:|---|---|
-| 2026-08-19 | Desktop 27.02 Alpha 6 | 6,4 | linha de base inicial | README, release notes, gate e matriz de hardware |
+| 2026-08-19 | Desktop 1.0 Alpha 6 | 6,4 | linha de base inicial | README, release notes, gate e matriz de hardware |
 
 ## Próximas revisões recomendadas
 

@@ -55,7 +55,7 @@ content and hardware coverage; a bare green status is rejected:
 - [ ] `uefi-secure-boot`: supported UEFI and Secure Boot scenarios pass;
 - [ ] `rollback`: update, Snapper snapshots and GRUB rollback pass;
 - [ ] `hardware-matrix`: required real/virtual hardware scenarios are recorded.
-- [ ] `v27.02-alpha6` remains available as the immutable Leap 16.0 rollback
+- [ ] `v1.0-alpha.6` remains available as the immutable Leap 16.0 rollback
   baseline and the 16.0 → 16.1 upgrade/rollback rehearsal is recorded.
 
 ## Alpha 8 additions

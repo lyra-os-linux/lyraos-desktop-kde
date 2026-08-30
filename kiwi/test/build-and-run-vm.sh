@@ -84,6 +84,7 @@ Sem opções, valida e constrói a ISO, cria uma VM descartável nova e a inicia
 Opções:
   --build-only   constrói e valida a ISO sem encerrar ou alterar a VM existente
   --skip-build    reutiliza a ISO já construída
+  --audit-only    audita a ISO existente sem abrir ou alterar a VM
   --boot-installed
                   inicia o disco já instalado sem anexar ISO e sem recriar
                   disco ou estado UEFI
@@ -120,6 +121,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --build-only) BUILD_ONLY=1; shift ;;
     --skip-build) SKIP_BUILD=1; shift ;;
+    --audit-only) SKIP_BUILD=1; BUILD_ONLY=1; shift ;;
     --boot-installed) BOOT_INSTALLED=1; shift ;;
     --fresh-disk) shift ;;
     --published-installer) USE_LOCAL_INSTALLER=0; USE_LOCAL_VEGA_QT=0; shift ;;
@@ -134,6 +136,15 @@ done
 # On many systems /tmp is a small RAM-backed tmpfs and cannot hold a full
 # image build plus an expanding qcow2 installation disk.
 WORK_DIR="${LYRA_TEST_WORK_DIR:-/var/tmp/lyraos-desktop-test-$CURRENT_UID}"
+if [ -z "${LYRA_TEST_WORK_DIR+x}" ]; then
+  WORK_PROBE="$WORK_DIR/.write-probe-$$"
+  if ! mkdir -p "$WORK_DIR" 2>/dev/null || ! : > "$WORK_PROBE" 2>/dev/null; then
+    WORK_DIR="/tmp/lyraos-desktop-kde-test-$CURRENT_UID"
+    mkdir -p "$WORK_DIR"
+  else
+    rm -f "$WORK_PROBE"
+  fi
+fi
 BUILD_DIR="$WORK_DIR/build"
 BUILD_DESCRIPTION_DIR="$WORK_DIR/description"
 ISO_DIR="$WORK_DIR/iso"
@@ -147,10 +158,6 @@ VM_PID_FILE="$VM_DIR/qemu.pid"
 VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"
 LOG="$WORK_DIR/lyra-os-test.log"
 
-if [ "$BUILD_ONLY" -eq 1 ] && [ "$SKIP_BUILD" -eq 1 ]; then
-  echo "--build-only cannot be combined with --skip-build" >&2
-  exit 1
-fi
 if [ "$BOOT_INSTALLED" -eq 1 ] &&
    { [ "$BUILD_ONLY" -eq 1 ] || [ "$SKIP_BUILD" -eq 1 ]; }; then
   echo "--boot-installed cannot be combined with --build-only or --skip-build" >&2
@@ -269,6 +276,7 @@ if [ ! -x "$RELEASE_TOOL" ]; then
 fi
 "$RELEASE_TOOL" check
 EXPECTED_ISO_NAME="$("$RELEASE_TOOL" field iso_filename)"
+EXPECTED_KIWI_ISO_NAME="lyra-os.x86_64-$("$RELEASE_TOOL" field version_id).iso"
 BUILD_SOURCE_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 BUILD_SOURCE_EPOCH="$(git -C "$REPO_ROOT" show -s --format=%ct "$BUILD_SOURCE_COMMIT")"
 GIT_STATUS_FILE="$WORK_DIR/source-status.txt"
@@ -789,10 +797,18 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
     exit 1
   fi
   if [ "$(basename "$BUILT_ISO")" != "$EXPECTED_ISO_NAME" ]; then
-    echo "!!! KIWI generated an unexpected ISO name:" >&2
-    echo "  expected: $EXPECTED_ISO_NAME" >&2
-    echo "  found:    $(basename "$BUILT_ISO")" >&2
-    exit 1
+    if [ "$(basename "$BUILT_ISO")" != "$EXPECTED_KIWI_ISO_NAME" ]; then
+      echo "!!! KIWI generated an unrecognized ISO name: $(basename "$BUILT_ISO")" >&2
+      exit 1
+    fi
+    KIWI_ISO_STEM="${EXPECTED_KIWI_ISO_NAME%.iso}"
+    EXPECTED_ISO_STEM="${EXPECTED_ISO_NAME%.iso}"
+    echo "--- normalizing KIWI artifacts: $KIWI_ISO_STEM -> $EXPECTED_ISO_STEM ---"
+    for SIBLING in "$BUILD_DIR/$KIWI_ISO_STEM".*; do
+      [ -e "$SIBLING" ] || continue
+      run_privileged mv "$SIBLING" "$BUILD_DIR/$EXPECTED_ISO_STEM.${SIBLING##*.}"
+    done
+    BUILT_ISO="$BUILD_DIR/$EXPECTED_ISO_NAME"
   fi
 
   ISO_GRUB_CFG="$WORK_DIR/iso-grub.cfg"

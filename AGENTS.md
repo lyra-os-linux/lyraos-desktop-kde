@@ -2,7 +2,7 @@
 
 ## Estabilidade em primeiro lugar
 
-O Lyra é uma distribuição Linux LTS, estável, sólida e confiável, voltada à
+O Lyra é uma distribuição Linux estável, sólida e confiável, voltada à
 experiência de “instalar e ficar tranquilo”. O usuário não deve precisar
 administrar constantemente o sistema para mantê-lo funcional, seguro e
 previsível. Preserve esse objetivo em toda decisão de arquitetura,
@@ -47,9 +47,9 @@ julgar explicitamente que elas fazem sentido para o Lyra e que o benefício é
 compatível com o risco de regressão. Essa exceção não autoriza completar
 silenciosamente partes incompletas do produto nem adicionar novos componentes.
 
-### Exceção aprovada para o ciclo 27.02
+### Exceção aprovada para o ciclo 1.0
 
-No Desktop e no Server 27.02, o mantenedor autoriza programar melhorias durante
+No Desktop e no Server 1.0, o mantenedor autoriza programar melhorias durante
 as Betas porque os ganhos esperados compensam os riscos. Cada melhoria ainda
 deve ter benefício concreto registrado, impacto e risco avaliados, testes de
 regressão proporcionais e plano de reversão. A autorização não dispensa os
