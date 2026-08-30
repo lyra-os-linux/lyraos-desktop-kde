@@ -83,8 +83,11 @@ o guest na mesma janela: a ISO só é priorizada no primeiro boot da execução.
 O modo padrão é de desenvolvimento: compila o workspace `installer/` e fixa
 seus binários na descrição KIWI temporária, com proveniência explícita dentro
 da imagem. Para validar um candidato publicável, use
-`--published-installer`; esse modo consome somente o RPM assinado do OBS.
-Uma imagem marcada como `local-installer-build` não é artefato de release.
+`--published-installer`; esse modo consome os RPMs assinados do instalador e
+do Vega Qt no OBS. Para qualificar uma mudança local do instalador usando o
+Vega Qt já publicado, use `--published-vega-qt`. Essa combinação produz uma
+imagem de integração/teste. Uma imagem marcada como `local-installer-build`
+não é artefato de release.
 
 Consulte `docs/image-builds.md` para a fronteira
 GitHub/OBS/SourceForge e `docs/installer-architecture.md` para o pipeline do

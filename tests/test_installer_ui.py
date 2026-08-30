@@ -104,6 +104,17 @@ class InstallerUiTests(unittest.TestCase):
         self.assertIn("function register(locale,catalog)", self.i18n)
         self.assertIn('<script src="i18n.js"></script>', self.html)
 
+    def test_welcome_highlight_is_flavor_neutral_security(self) -> None:
+        combined = "\n".join((self.html, self.i18n))
+
+        for desktop in ("Integrated GNOME", "Integrated KDE", "GNOME integrado", "KDE integrado"):
+            self.assertNotIn(desktop, combined)
+        for label in ("Security", "Segurança", "Seguridad"):
+            self.assertIn(
+                f".feature-item:nth-child(2) strong':'{label}'",
+                self.i18n,
+            )
+
     def test_install_progress_does_not_expose_backend_portuguese_descriptions(self) -> None:
         progress = self.javascript.split("function showExecutionEvent", 1)[1].split(
             "function setInstallationStatus", 1

@@ -14,6 +14,8 @@
 #   ./build-and-run-vm.sh --fresh-disk    accepted for compatibility; fresh is always enforced
 #   ./build-and-run-vm.sh --published-installer
 #                                        use the installer RPM from OBS instead of local sources
+#   ./build-and-run-vm.sh --published-vega-qt
+#                                        use the Vega Qt RPM from OBS with the local installer
 #   ./build-and-run-vm.sh --secure-boot   use OVMF with Secure Boot and Microsoft keys
 #   ./build-and-run-vm.sh --help          show every option and environment override
 #
@@ -87,7 +89,11 @@ Opções:
                   disco ou estado UEFI
   --fresh-disk    compatibilidade; disco/NVRAM novos são sempre obrigatórios
   --published-installer
-                  usa somente o RPM publicado no OBS (obrigatório para release)
+                  usa os RPMs publicados do instalador e do Vega Qt
+                  (obrigatório para release)
+  --published-vega-qt
+                  usa o Vega Qt publicado no OBS, preservando o instalador
+                  local; destinado a imagens de integração/teste
   --secure-boot   usa OVMF Secure Boot com chaves Microsoft
   -h, --help      mostra esta ajuda
 
@@ -103,8 +109,10 @@ reinicie dentro da mesma janela do QEMU para testar o primeiro boot pelo disco
 instalado. --build-only não requer QEMU, KVM, OVMF nem sessão gráfica.
 
 Por padrão, um novo build compila e injeta o instalador e o Vega Qt dos
-workspaces locais; o Lyra Welcome usa o RPM publicado no OBS. --skip-build
-apenas reinicia a ISO já existente e não recompila.
+workspaces locais; o Lyra Welcome usa o RPM publicado no OBS.
+--published-vega-qt mantém o instalador local e consome somente o Vega Qt do
+OBS, permitindo validar uma correção do instalador contra o pacote Vega que
+será entregue. --skip-build apenas reinicia a ISO existente e não recompila.
 EOF
 }
 
@@ -115,6 +123,7 @@ while [ "$#" -gt 0 ]; do
     --boot-installed) BOOT_INSTALLED=1; shift ;;
     --fresh-disk) shift ;;
     --published-installer) USE_LOCAL_INSTALLER=0; USE_LOCAL_VEGA_QT=0; shift ;;
+    --published-vega-qt) USE_LOCAL_VEGA_QT=0; shift ;;
     --secure-boot) SECURE_BOOT=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown flag: $1" >&2; exit 1 ;;

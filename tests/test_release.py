@@ -225,6 +225,17 @@ class RepositoryMetadataTests(unittest.TestCase):
         ):
             self.assertIn(evidence, builder)
 
+    def test_vm_helper_can_pair_local_installer_with_published_vega_qt(self) -> None:
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("--published-vega-qt", helper)
+        self.assertIn("--published-vega-qt) USE_LOCAL_VEGA_QT=0; shift ;;", helper)
+        self.assertNotIn(
+            "--published-vega-qt) USE_LOCAL_INSTALLER=0", helper
+        )
+
     def test_alpha8_wrapper_uses_the_stage_aware_release_gate(self) -> None:
         wrapper = (ROOT / "scripts/build-desktop-alpha8.sh").read_text(encoding="utf-8")
         uploader_wrapper = (ROOT / "scripts/upload-desktop-alpha8-sourceforge.sh").read_text(encoding="utf-8")
