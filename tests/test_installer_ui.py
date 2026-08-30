@@ -109,6 +109,8 @@ class InstallerUiTests(unittest.TestCase):
 
         for desktop in ("Integrated GNOME", "Integrated KDE", "GNOME integrado", "KDE integrado"):
             self.assertNotIn(desktop, combined)
+        self.assertNotIn('<ellipse cx="17" cy="20"', self.html)
+        self.assertIn('M16 3 27 7v8c0 7-4.6 11.8-11 14', self.html)
         for label in ("Security", "Segurança", "Seguridad"):
             self.assertIn(
                 f".feature-item:nth-child(2) strong':'{label}'",
