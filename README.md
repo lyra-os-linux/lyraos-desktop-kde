@@ -1,14 +1,28 @@
-# Lyra OS
+# Lyra OS — edição KDE Plasma
 
 > [!IMPORTANT]
-> O KDE é um flavor oficial do Lyra OS. Este repositório preserva parte do
+> O KDE Plasma é uma edição oficial do Lyra OS. Este repositório preserva parte do
 > histórico da edição GNOME usada como base, mas mantém imagem, integração e
 > gates de qualidade próprios para o Plasma.
 
-Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16,
-voltada a uma experiência GNOME simples, estável e integrada ao ecossistema
+Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16.1,
+voltada a uma experiência KDE Plasma simples, estável e integrada ao ecossistema
 Lyra. Este repositório contém a descrição KIWI usada para gerar a ISO live e
 o instalador da edição **Odisseia 27.02 Alpha 7** para computadores x86_64.
+
+O projeto mantém também as edições
+[GNOME](https://github.com/lyra-os-linux/lyraos-desktop) e
+[XFCE](https://github.com/lyra-os-linux/lyraos-desktop-xfce). O ciclo atual
+prioriza a estabilização das três edições até **28 de setembro de 2026**;
+o acompanhamento do Plasma está na [issue #1](https://github.com/lyra-os-linux/lyraos-desktop-kde/issues/1).
+
+## ECA Digital
+
+A edição KDE Plasma deve oferecer os mesmos recursos e garantias de adequação
+ao ECA Digital das edições GNOME e XFCE. O serviço de políticas, os contratos
+de privacidade e os gates de segurança são compartilhados; o Vega Qt fornece
+a integração nativa com o Plasma. O escopo comum é acompanhado pelo
+[épico central](https://github.com/lyra-os-linux/lyraos-desktop/issues/11).
 
 > [!IMPORTANT]
 > O projeto ainda está em desenvolvimento. A ISO não deve ser considerada uma
@@ -17,7 +31,7 @@ o instalador da edição **Odisseia 27.02 Alpha 7** para computadores x86_64.
 
 ## Principais características
 
-- openSUSE Leap 16 com GNOME 48 ou superior;
+- openSUSE Leap 16.1 com KDE Plasma 6;
 - sessão live e instalador nativo em Rust/Tauri, com HTML/CSS integrado ao
   WebKitGTK do sistema;
 - Btrfs com Snapper e snapshots automáticos durante operações do Zypper;
@@ -26,8 +40,9 @@ o instalador da edição **Odisseia 27.02 Alpha 7** para computadores x86_64.
 - escolha na instalação entre ZRAM com Zstandard, swap em disco ou nenhuma
   memória virtual;
 - Firefox, VLC, Flatpak e Flathub;
-- Vega, Sheliak e Fina pré-instalados pelos repositórios OBS do Lyra;
-- identidade visual Lyra Enterprise no desktop e no GRUB;
+- Vega Qt e Fina pré-instalados pelos repositórios OBS do Lyra;
+- personalização do Plasma por módulos nativos organizados no Vega Qt;
+- identidade visual Lyra OS no Plasma e no GRUB;
 - `lyra-report` para diagnóstico local e sob demanda, sem telemetria ou envio
   automático de dados.
 
@@ -55,9 +70,10 @@ Ainda estão pendentes:
 Consulte a [documentação técnica do KIWI](kiwi/README.md) para conhecer as
 decisões de implementação, limitações e verificações já realizadas.
 
-## Próximos ciclos
+## Ciclo atual e próximos ciclos
 
-A versão 27.02 terá o Lyra Installer em `en-US`, `pt-BR` e `es-ES`,
+A estabilização conjunta de GNOME, KDE Plasma e XFCE segue até 28 de setembro
+de 2026. A versão 27.02 terá o Lyra Installer em `en-US`, `pt-BR` e `es-ES`,
 com inglês como padrão e fallback. Os demais pacotes próprios continuam com
 o gate integral em `en-US`/`pt-BR`; sua ampliação fica para a versão 27.10. O cronograma e os
 gates estão registrados no [roadmap do projeto](docs/roadmap.md).
@@ -68,8 +84,8 @@ O ambiente de desenvolvimento suportado é o Lyra OS ou o openSUSE Leap 16.1.
 Clone o repositório e execute o bootstrap como usuário comum:
 
 ```bash
-git clone https://github.com/lyra-os-linux/lyraos-desktop.git
-cd lyraos-desktop
+git clone https://github.com/lyra-os-linux/lyraos-desktop-kde.git
+cd lyraos-desktop-kde
 ./scripts/bootstrap-development.sh --dry-run
 ./scripts/bootstrap-development.sh
 ```
