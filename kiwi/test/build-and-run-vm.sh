@@ -664,6 +664,8 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   IMAGE_INSTALLER_AUTOSTART="$BUILD_DIR/build/image-root/etc/xdg/autostart/lyra-installer-autostart.desktop"
   IMAGE_PLASMA_INITIALIZE_AUTOSTART="$BUILD_DIR/build/image-root/etc/xdg/autostart/lyra-plasma-initialize.desktop"
   IMAGE_LIVE_PLASMA_START="$BUILD_DIR/build/image-root/usr/libexec/lyra-live-plasma-start"
+  IMAGE_SKEL_KDEGLOBALS="$BUILD_DIR/build/image-root/etc/skel/.config/kdeglobals"
+  IMAGE_SKEL_PLASMARC="$BUILD_DIR/build/image-root/etc/skel/.config/plasmarc"
   IMAGE_KICKOFF_SETUP="$BUILD_DIR/build/image-root/usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/plasmoidsetupscripts/org.kde.plasma.kickoff.js"
   IMAGE_ICONTASKS_SETUP="$BUILD_DIR/build/image-root/usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/plasmoidsetupscripts/org.kde.plasma.icontasks.js"
   IMAGE_AUTOLOGIN_RETRY="$BUILD_DIR/build/image-root/usr/libexec/lyra-live-sddm-autologin-retry"
@@ -728,8 +730,13 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
      ! grep -Fx 'Exec=/usr/libexec/lyra-live-plasma-start' \
         "$IMAGE_PLASMA_INITIALIZE_AUTOSTART" >/dev/null ||
      ! grep -F 'kscreen-doctor -o' "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
-     ! grep -F 'lookandfeeltool -a org.kde.breezedark.desktop --resetLayout' \
+     grep -F 'lookandfeeltool' "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
+     ! grep -F 'org.kde.PlasmaShell.evaluateScript' \
         "$IMAGE_LIVE_PLASMA_START" >/dev/null ||
+     ! grep -Fx 'ColorScheme=BreezeDark' "$IMAGE_SKEL_KDEGLOBALS" >/dev/null ||
+     ! grep -Fx 'LookAndFeelPackage=org.kde.breezedark.desktop' \
+        "$IMAGE_SKEL_KDEGLOBALS" >/dev/null ||
+     ! grep -Fx 'name=breeze-dark' "$IMAGE_SKEL_PLASMARC" >/dev/null ||
      ! grep -F 'writeConfig("icon", "lyra-launcher")' \
         "$IMAGE_KICKOFF_SETUP" >/dev/null ||
      ! grep -F 'applications:org.lyraos.Vega.Qt.desktop' \

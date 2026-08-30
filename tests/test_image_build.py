@@ -679,12 +679,26 @@ class ImagePolicyTests(unittest.TestCase):
             ROOT / "installer/src/service/operations/deploy.rs"
         ).read_text(encoding="utf-8")
 
+        kdeglobals = (
+            ROOT / "kiwi/root/etc/skel/.config/kdeglobals"
+        ).read_text(encoding="utf-8")
+        plasmarc = (
+            ROOT / "kiwi/root/etc/skel/.config/plasmarc"
+        ).read_text(encoding="utf-8")
+
         self.assertIn("kscreen-doctor -o", startup)
-        self.assertIn("--resetLayout", startup)
-        self.assertIn("org.kde.breezedark.desktop", startup)
+        self.assertNotIn("lookandfeeltool", startup)
+        self.assertNotIn("--resetLayout", startup)
+        self.assertIn("org.kde.PlasmaShell.evaluateScript", startup)
+        self.assertIn('panelList[panelIndex].screen = 0', startup)
         self.assertIn("plasma-apply-wallpaperimage", startup)
         self.assertIn("2702-dawn.png", startup)
         self.assertIn("plasma-initialized", startup)
+        self.assertIn("ColorScheme=BreezeDark", kdeglobals)
+        self.assertIn(
+            "LookAndFeelPackage=org.kde.breezedark.desktop", kdeglobals
+        )
+        self.assertIn("name=breeze-dark", plasmarc)
         self.assertIn("Exec=/usr/libexec/lyra-live-plasma-start", autostart)
         live_only = deploy.split("const LIVE_ONLY_ARTIFACTS", 1)[1].split("];", 1)[0]
         self.assertNotIn('"usr/libexec/lyra-live-plasma-start",', live_only)

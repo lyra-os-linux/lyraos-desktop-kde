@@ -1,10 +1,11 @@
 #!/bin/sh
 set -u
 
-# A fast first Plasma login can start the layout before KWin has announced an
-# output. This happens both with live autologin and with the first user login
-# after installation, leaving the panel detached and the wallpaper blank.
-# Wait for a real enabled output before resetting each pristine user profile.
+# Breeze Dark is seeded in /etc/skel so Plasma paints the first frame with the
+# final Lyra theme. A fast first login can still create the layout before KWin
+# has announced an output, leaving a panel detached and the wallpaper blank.
+# Wait for a real enabled output, then repair only those properties instead of
+# reapplying the global theme and making the complete shell disappear briefly.
 state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/lyra-os"
 state_file="$state_dir/plasma-initialized"
 
@@ -18,9 +19,27 @@ if [ ! -e "$state_file" ]; then
         sleep 0.25
     done
 
-    # Apply Lyra's dark Breeze default with its stock panel only after screen
-    # discovery, then brand the wallpaper without replacing the layout itself.
-    /usr/bin/lookandfeeltool -a org.kde.breezedark.desktop --resetLayout || true
+    plasma_script='
+var panelList = panels();
+if (panelList.length === 0) {
+    loadTemplate("org.kde.plasma.desktop.defaultPanel");
+    panelList = panels();
+}
+for (var panelIndex = 0; panelIndex < panelList.length; panelIndex++) {
+    if (panelList[panelIndex].screen < 0) {
+        panelList[panelIndex].screen = 0;
+    }
+}
+'
+    if command -v qdbus6 >/dev/null 2>&1; then
+        qdbus6 org.kde.plasmashell /PlasmaShell \
+            org.kde.PlasmaShell.evaluateScript "$plasma_script" || true
+    elif command -v qdbus >/dev/null 2>&1; then
+        qdbus org.kde.plasmashell /PlasmaShell \
+            org.kde.PlasmaShell.evaluateScript "$plasma_script" || true
+    fi
+
+    # Wallpaper setup is deliberately independent from the panel layout.
     /usr/bin/plasma-apply-wallpaperimage \
         /usr/share/backgrounds/lyra/2702-dawn.png || true
     mkdir -p "$state_dir"
