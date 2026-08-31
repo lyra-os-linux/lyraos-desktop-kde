@@ -156,7 +156,21 @@ OVMF_VARS_STANDARD="$VM_DIR/ovmf-vars.bin"
 OVMF_VARS_SECURE="$VM_DIR/ovmf-secure-vars.bin"
 VM_PID_FILE="$VM_DIR/qemu.pid"
 VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"
+VM_ID_FILE="$VM_DIR/installation.uuid"
 LOG="$WORK_DIR/lyra-os-test.log"
+
+load_vm_uuid() {
+  if [ ! -f "$VM_ID_FILE" ] || [ -L "$VM_ID_FILE" ] ||
+     [ "$(stat -c '%u' "$VM_ID_FILE")" -ne "$CURRENT_UID" ]; then
+    echo "VM installation identity is missing, unsafe, or not owned by the current user: $VM_ID_FILE" >&2
+    return 1
+  fi
+  VM_UUID="$(tr -d '\n' < "$VM_ID_FILE")"
+  if [[ ! "$VM_UUID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+    echo "VM installation identity is malformed: $VM_ID_FILE" >&2
+    return 1
+  fi
+}
 
 if [ "$BOOT_INSTALLED" -eq 1 ] &&
    { [ "$BUILD_ONLY" -eq 1 ] || [ "$SKIP_BUILD" -eq 1 ]; }; then
@@ -331,6 +345,7 @@ if [ "$BOOT_INSTALLED" -eq 1 ]; then
   fi
 
   mkdir -p "$VM_DIR"
+  load_vm_uuid
   stop_previous_vm
   rm -f "$VM_PID_FILE" "$VM_MONITOR_SOCKET"
 
@@ -338,6 +353,7 @@ if [ "$BOOT_INSTALLED" -eq 1 ]; then
     -name lyra-os-test
     -pidfile "$VM_PID_FILE"
     -monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"
+    -uuid "$VM_UUID"
     -machine "$MACHINE"
     -cpu host
     -smp "$SMP"
@@ -984,7 +1000,12 @@ fi
 mkdir -p "$VM_DIR"
 stop_previous_vm
 echo "--- deleting previous VM disk and UEFI state ---"
-rm -f "$DISK_IMG" "$OVMF_VARS_STANDARD" "$OVMF_VARS_SECURE" "$VM_PID_FILE" "$VM_MONITOR_SOCKET"
+rm -f "$DISK_IMG" "$OVMF_VARS_STANDARD" "$OVMF_VARS_SECURE" "$VM_PID_FILE" "$VM_MONITOR_SOCKET" "$VM_ID_FILE"
+
+VM_ID_TMP="$VM_ID_FILE.tmp.$$"
+(umask 077; tr -d '\n' < /proc/sys/kernel/random/uuid > "$VM_ID_TMP")
+mv "$VM_ID_TMP" "$VM_ID_FILE"
+load_vm_uuid
 
 echo "--- creating install-target disk: $DISK_IMG ($DISK_SIZE) ---"
 qemu-img create -f qcow2 "$DISK_IMG" "$DISK_SIZE"
@@ -1004,6 +1025,7 @@ QEMU_ARGS=(
   -name lyra-os-test
   -pidfile "$VM_PID_FILE"
   -monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"
+  -uuid "$VM_UUID"
   -machine "$MACHINE"
   -cpu host
   -smp "$SMP"
