@@ -46,6 +46,11 @@ class ImagePolicyTests(unittest.TestCase):
         }
         self.assertIn("man", shared_image_packages)
 
+    def test_product_release_identity_is_owned_by_an_rpm(self) -> None:
+        root = ET.parse(ROOT / "kiwi/config.xml").getroot()
+        packages = {node.attrib["name"] for node in root.findall("packages/package")}
+        self.assertIn("lyra-release", packages)
+
     def test_zypper_cache_policy_matches_vega_update_flow(self) -> None:
         config = (
             ROOT / "kiwi/root/etc/zypp/zypp.conf.d/90-lyra-refresh.conf"
