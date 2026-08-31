@@ -66,6 +66,7 @@ class ImagePolicyTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         for policy in (
             "ExecStartPre=/usr/libexec/lyra-localsearch-preflight",
+            "Environment=LD_LIBRARY_PATH=/usr/lib64/zlib-ng-compat",
             "StartLimitBurst=3",
             "CPUWeight=10",
             "MemoryHigh=512M",
