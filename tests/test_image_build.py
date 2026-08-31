@@ -598,6 +598,14 @@ class ImagePolicyTests(unittest.TestCase):
             disk.unlink(); disk.write_bytes(b"replacement")
             self.assertNotEqual(subprocess.run([*base, "--mode", "installed"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode, 0)
 
+    def test_vm_helper_summarizes_rehearsal_without_launching_qemu(self) -> None:
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
+        self.assertIn("--summarize-upgrade", helper)
+        self.assertIn("LYRA_REHEARSAL_OBSERVER", helper)
+        self.assertIn("upgrade-rehearsal-observations.json", helper)
+        self.assertIn("--baseline-build-id lyra-release-1.0", helper)
+        self.assertIn("--target-build-id lyra-release-1.1-beta.1", helper)
+
     def test_vm_uses_supported_virtio_gtk_display(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
             encoding="utf-8"

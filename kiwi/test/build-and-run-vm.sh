@@ -63,6 +63,7 @@ REHEARSAL_TRACE_TOOL="$SCRIPT_DIR/rehearsal-trace.py"
 SKIP_BUILD=0
 BUILD_ONLY=0
 BOOT_INSTALLED=0
+SUMMARIZE_UPGRADE=0
 SECURE_BOOT=0
 USE_LOCAL_INSTALLER=1
 USE_LOCAL_VEGA_QT=1
@@ -89,6 +90,8 @@ Opções:
   --boot-installed
                   inicia o disco já instalado sem anexar ISO e sem recriar
                   disco ou estado UEFI
+  --summarize-upgrade
+                  valida baseline, target e rollback já observados sem iniciar a VM
   --fresh-disk    compatibilidade; disco/NVRAM novos são sempre obrigatórios
   --published-installer
                   usa os RPMs publicados do instalador e do Vega Qt
@@ -104,6 +107,7 @@ Recursos podem ser ajustados sem editar o script:
   LYRA_VM_RAM_MB=8192    memória da VM em MiB (padrão: 8192)
   LYRA_VM_CPUS=4         CPUs virtuais (padrão: 4)
   LYRA_TEST_WORK_DIR=... diretório persistente de build, ISO, VM e logs
+  LYRA_REHEARSAL_OBSERVER=/caminho/rehearsal-observations.py
 
 Cada execução que inicia QEMU encerra a VM anterior e apaga seu disco e estado
 UEFI somente depois de uma ISO válida estar disponível. Depois da instalação,
@@ -124,6 +128,7 @@ while [ "$#" -gt 0 ]; do
     --skip-build) SKIP_BUILD=1; shift ;;
     --audit-only) SKIP_BUILD=1; BUILD_ONLY=1; shift ;;
     --boot-installed) BOOT_INSTALLED=1; shift ;;
+    --summarize-upgrade) SUMMARIZE_UPGRADE=1; shift ;;
     --fresh-disk) shift ;;
     --published-installer) USE_LOCAL_INSTALLER=0; USE_LOCAL_VEGA_QT=0; shift ;;
     --published-vega-qt) USE_LOCAL_VEGA_QT=0; shift ;;
@@ -160,6 +165,7 @@ VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"
 VM_ID_FILE="$VM_DIR/installation.uuid"
 VM_TRACE_FILE="$VM_DIR/upgrade-rehearsal-trace.json"
 VM_GUEST_EVIDENCE_FILE="$VM_DIR/upgrade-guest-evidence.jsonl"
+VM_REHEARSAL_SUMMARY_FILE="$VM_DIR/upgrade-rehearsal-observations.json"
 LOG="$WORK_DIR/lyra-os-test.log"
 
 load_vm_uuid() {
@@ -174,6 +180,25 @@ load_vm_uuid() {
     return 1
   fi
 }
+
+if [ "$SUMMARIZE_UPGRADE" -eq 1 ]; then
+  if [ "$BOOT_INSTALLED" -eq 1 ] || [ "$BUILD_ONLY" -eq 1 ] ||
+     [ "$SKIP_BUILD" -eq 1 ] || [ "$SECURE_BOOT" -eq 1 ]; then
+    echo "--summarize-upgrade cannot be combined with VM/build flags" >&2
+    exit 1
+  fi
+  OBSERVER="${LYRA_REHEARSAL_OBSERVER:-}"
+  if [ -z "$OBSERVER" ] || [ ! -f "$OBSERVER" ] || [ -L "$OBSERVER" ] ||
+     [ ! -x "$OBSERVER" ] || [ "$(stat -c '%u' "$OBSERVER")" -ne "$CURRENT_UID" ]; then
+    echo "LYRA_REHEARSAL_OBSERVER must be an owned executable regular file" >&2
+    exit 1
+  fi
+  python3 "$OBSERVER" --trace "$VM_TRACE_FILE" \
+    --observations "$VM_GUEST_EVIDENCE_FILE" --output "$VM_REHEARSAL_SUMMARY_FILE" \
+    --baseline-version 1.0 --baseline-build-id lyra-release-1.0 \
+    --target-version 1.1-beta.1 --target-build-id lyra-release-1.1-beta.1
+  exit 0
+fi
 
 if [ "$BOOT_INSTALLED" -eq 1 ] &&
    { [ "$BUILD_ONLY" -eq 1 ] || [ "$SKIP_BUILD" -eq 1 ]; }; then
