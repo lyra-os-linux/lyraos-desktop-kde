@@ -571,6 +571,11 @@ class ImagePolicyTests(unittest.TestCase):
     def test_vm_helper_can_boot_installed_disk_without_iso_or_reset(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
         self.assertIn("--boot-installed", helper)
+        self.assertIn('VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"', helper)
+        self.assertEqual(
+            helper.count('-monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"'),
+            2,
+        )
 
     def test_vm_uses_supported_virtio_gtk_display(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
