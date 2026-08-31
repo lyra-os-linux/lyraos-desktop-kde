@@ -159,6 +159,7 @@ VM_PID_FILE="$VM_DIR/qemu.pid"
 VM_MONITOR_SOCKET="$VM_DIR/qemu-monitor.sock"
 VM_ID_FILE="$VM_DIR/installation.uuid"
 VM_TRACE_FILE="$VM_DIR/upgrade-rehearsal-trace.json"
+VM_GUEST_EVIDENCE_FILE="$VM_DIR/upgrade-guest-evidence.jsonl"
 LOG="$WORK_DIR/lyra-os-test.log"
 
 load_vm_uuid() {
@@ -360,6 +361,9 @@ if [ "$BOOT_INSTALLED" -eq 1 ]; then
     -pidfile "$VM_PID_FILE"
     -monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"
     -uuid "$VM_UUID"
+    -chardev "file,id=upgrade-evidence,path=$VM_GUEST_EVIDENCE_FILE,append=on"
+    -device virtio-serial-pci
+    -device virtserialport,chardev=upgrade-evidence,name=org.lyraos.UpgradeEvidence
     -machine "$MACHINE"
     -cpu host
     -smp "$SMP"
@@ -1008,7 +1012,7 @@ fi
 mkdir -p "$VM_DIR"
 stop_previous_vm
 echo "--- deleting previous VM disk and UEFI state ---"
-rm -f "$DISK_IMG" "$OVMF_VARS_STANDARD" "$OVMF_VARS_SECURE" "$VM_PID_FILE" "$VM_MONITOR_SOCKET" "$VM_ID_FILE" "$VM_TRACE_FILE"
+rm -f "$DISK_IMG" "$OVMF_VARS_STANDARD" "$OVMF_VARS_SECURE" "$VM_PID_FILE" "$VM_MONITOR_SOCKET" "$VM_ID_FILE" "$VM_TRACE_FILE" "$VM_GUEST_EVIDENCE_FILE"
 
 VM_ID_TMP="$VM_ID_FILE.tmp.$$"
 (umask 077; tr -d '\n' < /proc/sys/kernel/random/uuid > "$VM_ID_TMP")
@@ -1034,6 +1038,9 @@ QEMU_ARGS=(
   -pidfile "$VM_PID_FILE"
   -monitor "unix:$VM_MONITOR_SOCKET,server=on,wait=off"
   -uuid "$VM_UUID"
+  -chardev "file,id=upgrade-evidence,path=$VM_GUEST_EVIDENCE_FILE,append=on"
+  -device virtio-serial-pci
+  -device virtserialport,chardev=upgrade-evidence,name=org.lyraos.UpgradeEvidence
   -machine "$MACHINE"
   -cpu host
   -smp "$SMP"
