@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -577,7 +578,18 @@ class ImagePolicyTests(unittest.TestCase):
             2,
         )
         self.assertIn('VM_ID_FILE="$VM_DIR/installation.uuid"', helper)
-        self.assertEqual(helper.count('-uuid "$VM_UUID"'), 2)
+        self.assertEqual(helper.count('-uuid "$VM_UUID"'), 4)
+
+    def test_upgrade_rehearsal_trace_is_atomic_and_bound_to_vm_artifacts(self) -> None:
+        tool = ROOT / "kiwi/test/rehearsal-trace.py"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary); disk, nvram, trace = root / "disk", root / "nvram", root / "trace.json"
+            disk.write_bytes(b"disk"); nvram.write_bytes(b"nvram")
+            base = [sys.executable, str(tool), "--trace", str(trace), "--uuid", "12345678-1234-4234-8234-123456789abc", "--disk", str(disk), "--nvram", str(nvram)]
+            subprocess.run([*base, "--mode", "live"], check=True); subprocess.run([*base, "--mode", "installed"], check=True)
+            document = json.loads(trace.read_text(encoding="utf-8")); self.assertEqual(document["status"], "in-progress"); self.assertEqual(document["qemu_launch_count"], 2)
+            disk.unlink(); disk.write_bytes(b"replacement")
+            self.assertNotEqual(subprocess.run([*base, "--mode", "installed"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode, 0)
 
     def test_vm_uses_supported_virtio_gtk_display(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
