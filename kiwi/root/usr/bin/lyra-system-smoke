@@ -45,13 +45,13 @@ SERVER_LIVE_ONLY_PATHS = (
 # scope without an entry criterion for a v2).
 EXPECTED_ROOT_FSTYPE = {"desktop": "btrfs", "server": "ext4"}
 
-# Desktop-only units (sddm, cups) vs the persistent services the server's
-# console installer enables. vegad is deliberately absent: it is a static
+# Desktop-only units (display manager, cups) vs the persistent services the
+# server's console installer enables. vegad is deliberately absent: it is a static
 # D-Bus-activated unit which exits after its idle timeout.
 EXPECTED_ACTIVE_UNITS = {
     "desktop": (
         "graphical.target",
-        "sddm.service",
+        "display-manager.service",
         "NetworkManager.service",
         "firewalld.service",
         "cups.service",

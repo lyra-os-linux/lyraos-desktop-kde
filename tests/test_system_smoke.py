@@ -84,6 +84,12 @@ class SystemSmokeTests(unittest.TestCase):
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["mode"], "first-boot")
 
+    def test_desktop_checks_the_canonical_display_manager_unit(self) -> None:
+        units = system_smoke.EXPECTED_ACTIVE_UNITS["desktop"]
+        self.assertIn("display-manager.service", units)
+        for implementation in ("gdm.service", "sddm.service", "lightdm.service"):
+            self.assertNotIn(implementation, units)
+
     def test_real_root_fstab_verification_uses_cached_sudo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
