@@ -16,8 +16,8 @@ número. Datas pertencem ao roadmap ou ao `BUILD_ID`, nunca à versão comercial
 ## Geração atual
 
 - geração: **Lyra OS 1 — Odisseia**;
-- primeira versão estável planejada: **Lyra OS 1.0 — Odisseia**;
-- base tecnológica da 1.0: **openSUSE Leap 16.1**;
+- primeira versão estável planejada: **Lyra OS 1.1 — Odisseia**;
+- base tecnológica da 1.1: **openSUSE Leap 16.1**;
 - arquitetura inicial: **x86_64**.
 
 O codename identifica toda a geração: qualquer release `1.x` continua sendo
@@ -28,10 +28,10 @@ ciclos de publicação independentes.
 
 | Comunicação | Identificador técnico |
 |---|---|
-| Lyra OS 1.0 Alpha 1 | `1.0-alpha.1` |
-| Lyra OS 1.0 Beta 1 | `1.0-beta.1` |
-| Lyra OS 1.0 RC1 | `1.0-rc.1` |
-| Lyra OS 1.0 | `1.0` |
+| Lyra OS 1.1 Alpha 1 | `1.1-alpha.1` |
+| Lyra OS 1.1 Beta 1 | `1.1-beta.1` |
+| Lyra OS 1.1 RC1 | `1.1-rc.1` |
+| Lyra OS 1.1 | `1.1` |
 
 ## Fonte canônica e metadados
 
@@ -43,8 +43,8 @@ ciclos de publicação independentes.
 `odisseia`, `BUILD_ID` identifica a data do build e `IMAGE_VERSION`
 identifica a candidata completa.
 
-ISOs usam `LyraOS-Desktop-1.0-alpha.7-x86_64.iso` em desenvolvimento e
-`LyraOS-Desktop-1.0-x86_64.iso` na release estável.
+ISOs usam `LyraOS-Desktop-KDE-1.1-alpha.7-x86_64.iso` em desenvolvimento e
+`LyraOS-Desktop-KDE-1.1-x86_64.iso` na release estável.
 
 ## Compatibilidade, promoção e suporte
 
@@ -57,7 +57,7 @@ data chegou. O suporte da base openSUSE, o suporte de uma release Lyra e o ciclo
 da geração 1.x são distintos. Não há promessa de EOL ou suporte prolongado do
 Lyra sem política formal e sustentável.
 
-O Lyra OS 1.0 terá suporte comunitário, sem prazo contratual ou EOL prometido.
+O Lyra OS 1.1 terá suporte comunitário, sem prazo contratual ou EOL prometido.
 O lançamento está previsto para **20 de fevereiro de 2027**, sempre condicionado
 ao gate completo. Artefatos legados serão preservados e republicados com nomes
 semânticos, mantendo checksums, assinaturas e proveniência verificáveis.

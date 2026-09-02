@@ -11,8 +11,9 @@ EXPECTED_VERSION="${LYRA_EXPECTED_VERSION:-1.0-alpha.6}"
 RELEASE_LABEL="${LYRA_RELEASE_LABEL:-Desktop Alpha 6}"
 RELEASE_SLUG="${LYRA_RELEASE_SLUG:-alpha6}"
 COMMAND_NAME="${LYRA_COMMAND_NAME:-$0}"
-REMOTE="rodrigobritosoa@frs.sourceforge.net:/home/frs/project/lyra/releases/1.0/desktop/$RELEASE_SLUG/"
-DOWNLOAD_URL="https://downloads.sourceforge.net/project/lyra/releases/1.0/desktop/$RELEASE_SLUG"
+RELEASE_SERIES="$("$REPO_ROOT/scripts/release.py" field product_version)"
+REMOTE="rodrigobritosoa@frs.sourceforge.net:/home/frs/project/lyra/releases/$RELEASE_SERIES/desktop/$RELEASE_SLUG/"
+DOWNLOAD_URL="https://downloads.sourceforge.net/project/lyra/releases/$RELEASE_SERIES/desktop/$RELEASE_SLUG"
 CHECK_ONLY=0
 DECISION_FILE=""
 

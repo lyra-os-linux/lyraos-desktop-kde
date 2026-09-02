@@ -1,6 +1,6 @@
-# Lyra OS 1.0 Alpha 7 “Odisseia” — notas de lançamento
+# Lyra OS 1.1 Alpha 7 “Odisseia” — notas de lançamento
 
-O Lyra OS Alpha 7 é a primeira candidata do Desktop 1.0 baseada no
+O Lyra OS Alpha 7 é a primeira candidata do Desktop 1.1 baseada no
 openSUSE Leap 16.1. Esta versão concentra-se na qualificação da nova base e
 na preservação do comportamento estável já validado na Alpha 6.
 
@@ -54,13 +54,13 @@ O cenário coberto continua sendo instalação em disco inteiro.
 Arquivo esperado:
 
 ```text
-LyraOS-Desktop-1.0-alpha.7-x86_64.iso
+LyraOS-Desktop-KDE-1.1-alpha.7-x86_64.iso
 ```
 
 Verifique o checksum fornecido junto da ISO:
 
 ```sh
-sha256sum -c LyraOS-Desktop-1.0-alpha.7-x86_64.iso.sha256
+sha256sum -c LyraOS-Desktop-KDE-1.1-alpha.7-x86_64.iso.sha256
 ```
 
 Conforme a ADR 0005, a Alpha 7 usa SHA-256 sem assinatura GPG destacada da

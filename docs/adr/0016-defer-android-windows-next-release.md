@@ -7,7 +7,7 @@
 
 ## Contexto
 
-A Alpha 7 migrou o Lyra OS Desktop 1.0 para openSUSE Leap 16.1. A primeira
+A Alpha 7 migrou o Lyra OS Desktop 1.1 para openSUSE Leap 16.1. A primeira
 candidata iniciou com desempenho e fluidez melhores que o esperado, mas ainda
 precisa concluir instalação, primeiro boot, atualização, rollback, Secure Boot
 e matriz de hardware.
@@ -21,12 +21,12 @@ objetivo principal desta candidata.
 
 O mantenedor definiu que este trabalho volta a ser discutido no release futura.
 Vinculá-lo à Alpha 8 apenas deslocaria silenciosamente uma funcionalidade ampla
-para o mesmo ciclo 1.0, próximo do congelamento funcional da Beta 1.
+para o mesmo ciclo 1.1, próximo do congelamento funcional da Beta 1.
 
 ## Decisão
 
 Todo suporte de produto a aplicativos Android e Windows é retirado do ciclo
-Desktop 1.0. Isso inclui:
+Desktop 1.1. Isso inclui:
 
 - empacotamento e repositórios de runtimes;
 - pré-instalação ou configuração de Bottles, Wine ou Waydroid;

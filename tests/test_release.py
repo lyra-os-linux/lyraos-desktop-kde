@@ -163,6 +163,7 @@ class RepositoryMetadataTests(unittest.TestCase):
         self.assertNotIn("iso.sha256.asc", uploader)
 
     def test_alpha7_release_uses_leap_16_1_and_preserves_full_evidence_gate(self) -> None:
+        self.assertEqual(Release.from_file().version_id, "1.1-alpha.7")
         wrapper = (ROOT / "scripts/build-desktop-alpha7.sh").read_text(
             encoding="utf-8"
         )
@@ -174,7 +175,7 @@ class RepositoryMetadataTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         kiwi = (ROOT / "kiwi/config.xml").read_text(encoding="utf-8")
 
-        self.assertIn('LYRA_EXPECTED_VERSION="1.0-alpha.7"', wrapper)
+        self.assertIn('LYRA_EXPECTED_VERSION="1.1-alpha.7"', wrapper)
         self.assertIn('LYRA_RELEASE_SLUG="alpha7"', uploader_wrapper)
         self.assertIn("--published-installer", builder)
         self.assertIn("obs-release.py health", builder)
@@ -210,7 +211,7 @@ class RepositoryMetadataTests(unittest.TestCase):
         gate = (ROOT / "docs/release-gate.md").read_text(encoding="utf-8")
         contract = (ROOT / "docs/alpha8-evidence.md").read_text(encoding="utf-8")
 
-        self.assertIn('LYRA_EXPECTED_VERSION="1.0-alpha.8"', wrapper)
+        self.assertIn('LYRA_EXPECTED_VERSION="1.1-alpha.8"', wrapper)
         self.assertIn('LYRA_RELEASE_SLUG="alpha8"', uploader_wrapper)
         self.assertIn("required-test-results", builder)
         self.assertIn("required-test-results", uploader)
