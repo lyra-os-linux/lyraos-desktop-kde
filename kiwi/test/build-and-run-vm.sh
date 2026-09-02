@@ -660,7 +660,9 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   fi
 
   IMAGE_OS_RELEASE="$BUILD_DIR/build/image-root/etc/os-release"
-  if ! grep -Fx "VERSION_ID=\"$("$RELEASE_TOOL" field version_id)\"" \
+  if ! grep -Fx "VERSION_ID=\"$("$RELEASE_TOOL" field product_version)\"" \
+      "$IMAGE_OS_RELEASE" >/dev/null ||
+     ! grep -Fx "IMAGE_VERSION=\"$("$RELEASE_TOOL" field version_id)\"" \
       "$IMAGE_OS_RELEASE" >/dev/null; then
     echo "!!! built image /etc/os-release does not match release.toml" >&2
     exit 1

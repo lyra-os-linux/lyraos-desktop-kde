@@ -563,6 +563,17 @@ class ImagePolicyTests(unittest.TestCase):
         self.assertLess(build_only_exit, qemu_requirements)
         self.assertLess(iso_ready, destructive_vm_reset)
 
+    def test_vm_helper_validates_product_and_artifact_versions(self) -> None:
+        helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            r'VERSION_ID=\"$("$RELEASE_TOOL" field product_version)\"', helper
+        )
+        self.assertIn(
+            r'IMAGE_VERSION=\"$("$RELEASE_TOOL" field version_id)\"', helper
+        )
+
     def test_vm_helper_guards_host_loader_cache_during_kiwi_build(self) -> None:
         helper = (ROOT / "kiwi/test/build-and-run-vm.sh").read_text(encoding="utf-8")
         self.assertIn("host_loader_is_healthy", helper)
