@@ -5,6 +5,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,6 +83,80 @@ class SystemSmokeTests(unittest.TestCase):
             )
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["mode"], "first-boot")
+
+    def test_real_root_fstab_verification_uses_cached_sudo(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.create_installed_root(root)
+            calls: list[list[str]] = []
+
+            def runner(arguments: list[str]) -> tuple[int, str]:
+                calls.append(arguments)
+                if arguments[:3] == ["sudo", "-n", "--"]:
+                    if arguments[3:] == ["true"]:
+                        return 0, ""
+                    return self.runner(arguments[3:])
+                return self.runner(arguments)
+
+            with mock.patch.object(Path, "resolve", return_value=Path("/")):
+                report = system_smoke.validate_first_boot(
+                    root=root, username="alice", runner=runner
+                )
+
+            self.assertEqual(report["status"], "passed")
+            self.assertIn(
+                [
+                    "sudo",
+                    "-n",
+                    "--",
+                    "findmnt",
+                    "--verify",
+                    "--tab-file",
+                    "/etc/fstab",
+                ],
+                calls,
+            )
+
+    def test_critical_journal_detail_requires_an_acknowledgement(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.create_installed_root(root)
+
+            def runner(arguments: list[str]) -> tuple[int, str]:
+                if arguments[0] == "journalctl" and "-p" in arguments:
+                    return 0, "kernel: critical fixture"
+                return self.runner(arguments)
+
+            report = system_smoke.validate_first_boot(
+                root=root, username="alice", runner=runner
+            )
+            journal_check = next(
+                item
+                for item in report["checks"]
+                if item["id"] == "critical-journal"
+            )
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(
+                journal_check["detail"],
+                "critical entries require explicit acknowledgement",
+            )
+
+            acknowledged = system_smoke.validate_first_boot(
+                root=root,
+                username="alice",
+                runner=runner,
+                journal_acknowledgement="reviewed VM-only firmware warning",
+            )
+            acknowledged_check = next(
+                item
+                for item in acknowledged["checks"]
+                if item["id"] == "critical-journal"
+            )
+            self.assertEqual(acknowledged["status"], "passed")
+            self.assertEqual(
+                acknowledged_check["detail"],
+                "reviewed with explicit acknowledgement",
+            )
 
     def test_installer_or_live_artifact_blocks_first_boot(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -166,6 +241,84 @@ class SystemSmokeTests(unittest.TestCase):
                 path.chmod(0o600)
             self.assertEqual(code, 0)
             self.assertIn("menuentry ", content)
+
+    def test_privileged_probe_detects_a_protected_system_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "protected" / "BOOTX64.EFI"
+            path.parent.mkdir()
+            path.write_text("fixture", encoding="utf-8")
+            path.parent.chmod(0)
+
+            def runner(arguments: list[str]) -> tuple[int, str]:
+                self.assertEqual(
+                    arguments,
+                    ["sudo", "-n", "--", "test", "-f", str(path)],
+                )
+                return 0, ""
+
+            try:
+                exists, error = system_smoke.probe_system_path(
+                    path,
+                    kind="file",
+                    runner=runner,
+                    privileged_fallback=True,
+                )
+            finally:
+                path.parent.chmod(0o700)
+            self.assertTrue(exists)
+            self.assertEqual(error, "")
+
+    def test_privileged_probe_handles_a_protected_absent_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "protected" / "absent"
+            path.parent.mkdir()
+            path.parent.chmod(0)
+
+            def runner(arguments: list[str]) -> tuple[int, str]:
+                if arguments == [
+                    "sudo",
+                    "-n",
+                    "--",
+                    "test",
+                    "-e",
+                    str(path),
+                ]:
+                    return 1, ""
+                self.assertEqual(arguments, ["sudo", "-n", "--", "true"])
+                return 0, ""
+
+            try:
+                exists, error = system_smoke.probe_system_path(
+                    path,
+                    kind="exists",
+                    runner=runner,
+                    privileged_fallback=True,
+                )
+            finally:
+                path.parent.chmod(0o700)
+            self.assertFalse(exists)
+            self.assertEqual(error, "")
+
+    def test_unprivileged_path_probe_is_a_structured_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.create_installed_root(root)
+            efi = root / "boot/efi"
+            efi.chmod(0)
+            try:
+                report = system_smoke.validate_secure_boot(
+                    root=root, runner=self.runner
+                )
+            finally:
+                efi.chmod(0o700)
+            fallback_check = next(
+                item
+                for item in report["checks"]
+                if item["id"] == "efi-fallback-loader"
+            )
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(fallback_check["status"], "failed")
+            self.assertIn("Permission denied", fallback_check["detail"])
 
     def test_unknown_profile_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -111,6 +111,41 @@ def read_system_text(
         return code, output or str(error)
 
 
+def probe_system_path(
+    path: Path,
+    *,
+    kind: str,
+    runner: CommandRunner,
+    privileged_fallback: bool,
+) -> tuple[bool, str]:
+    predicates = {
+        "exists": (path.exists, "-e"),
+        "file": (path.is_file, "-f"),
+        "directory": (path.is_dir, "-d"),
+    }
+    if kind not in predicates:
+        raise ValueError(f"unsupported path probe kind: {kind!r}")
+    predicate, test_flag = predicates[kind]
+    try:
+        return predicate(), ""
+    except OSError as error:
+        if not privileged_fallback:
+            return False, str(error)
+        code, output = privileged_command(
+            ["test", test_flag, str(path)], runner=runner, required=True
+        )
+        if code == 0:
+            return True, ""
+        if code == 1 and not output:
+            privilege_code, privilege_output = privileged_command(
+                ["true"], runner=runner, required=True
+            )
+            if privilege_code == 0:
+                return False, ""
+            return False, privilege_output or "privileged path probe failed"
+        return False, output or str(error)
+
+
 def result(
     mode: str,
     checks: list[dict[str, str]],
@@ -253,11 +288,25 @@ def validate_first_boot(
     check("live-user-removed", code != 0 and not live_user, "liveuser is absent")
 
     live_only_paths = LIVE_ONLY_PATHS if profile == "desktop" else SERVER_LIVE_ONLY_PATHS
-    remaining = [path for path in live_only_paths if rooted(root, path).exists()]
+    remaining: list[str] = []
+    probe_errors: list[str] = []
+    for path in live_only_paths:
+        exists, error = probe_system_path(
+            rooted(root, path),
+            kind="exists",
+            runner=runner,
+            privileged_fallback=privileged_access_required,
+        )
+        if exists:
+            remaining.append(path)
+        elif error:
+            probe_errors.append(f"{path}: {error}")
     check(
         "live-artifacts-removed",
-        not remaining,
-        "none remain" if not remaining else ", ".join(remaining),
+        not remaining and not probe_errors,
+        "none remain"
+        if not remaining and not probe_errors
+        else "; ".join([*remaining, *probe_errors]),
     )
     code, package_output = runner(
         ["rpm", "--root", str(root), "-q", "lyra-installer"]
@@ -268,10 +317,21 @@ def validate_first_boot(
         package_output or "lyra-installer is absent from the target RPM database",
     )
 
+    live_rootfs, live_rootfs_error = probe_system_path(
+        rooted(root, "/run/overlay/live/LiveOS/squashfs.img"),
+        kind="exists",
+        runner=runner,
+        privileged_fallback=privileged_access_required,
+    )
     check(
         "not-live-rootfs",
-        not rooted(root, "/run/overlay/live/LiveOS/squashfs.img").exists(),
-        "live squashfs is not mounted",
+        not live_rootfs and not live_rootfs_error,
+        live_rootfs_error
+        or (
+            "live squashfs is still mounted"
+            if live_rootfs
+            else "live squashfs is not mounted"
+        ),
     )
     expected_fstype = EXPECTED_ROOT_FSTYPE[profile]
     code, root_fstype = runner(["findmnt", "-n", "-o", "FSTYPE", "/"])
@@ -286,8 +346,10 @@ def validate_first_boot(
         code == 0 and bool(efi_mount),
         efi_mount or "/boot/efi is not mounted",
     )
-    code, fstab_output = runner(
-        ["findmnt", "--verify", "--tab-file", "/etc/fstab"]
+    code, fstab_output = privileged_command(
+        ["findmnt", "--verify", "--tab-file", "/etc/fstab"],
+        runner=runner,
+        required=privileged_access_required,
     )
     check("fstab-valid", code == 0, fstab_output or "fstab verified")
 
@@ -402,7 +464,11 @@ def validate_first_boot(
         journal_passed,
         "empty"
         if not critical_journal
-        else "reviewed with explicit acknowledgement",
+        else (
+            "reviewed with explicit acknowledgement"
+            if journal_acknowledgement.strip()
+            else "critical entries require explicit acknowledgement"
+        ),
     )
     observations["critical_journal"] = critical_journal.splitlines()
     observations["journal_acknowledgement"] = journal_acknowledgement.strip()
@@ -416,6 +482,7 @@ def validate_secure_boot(
 ) -> dict[str, object]:
     checks: list[dict[str, str]] = []
     observations: dict[str, object] = {}
+    privileged_access_required = root.resolve() == Path("/")
 
     def check(identifier: str, passed: bool, detail: str) -> None:
         checks.append(
@@ -441,7 +508,17 @@ def validate_secure_boot(
         secure_boot or "mokutil did not report Secure Boot state",
     )
     fallback = rooted(root, "/boot/efi/EFI/BOOT/BOOTX64.EFI")
-    check("efi-fallback-loader", fallback.is_file(), str(fallback))
+    fallback_exists, fallback_error = probe_system_path(
+        fallback,
+        kind="file",
+        runner=runner,
+        privileged_fallback=privileged_access_required,
+    )
+    check(
+        "efi-fallback-loader",
+        fallback_exists and not fallback_error,
+        fallback_error or str(fallback),
+    )
     observations["mokutil"] = secure_boot.splitlines()
 
     return result("uefi-secure-boot", checks, observations)
