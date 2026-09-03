@@ -173,10 +173,15 @@ class RepositoryMetadataTests(unittest.TestCase):
         uploader_wrapper = (
             ROOT / "scripts/upload-desktop-alpha7-sourceforge.sh"
         ).read_text(encoding="utf-8")
+        kde_uploader = (
+            ROOT / "scripts/upload-kde-alpha7-sourceforge.sh"
+        ).read_text(encoding="utf-8")
         kiwi = (ROOT / "kiwi/config.xml").read_text(encoding="utf-8")
 
         self.assertIn('LYRA_EXPECTED_VERSION="1.1-alpha.7"', wrapper)
         self.assertIn('LYRA_RELEASE_SLUG="alpha7"', uploader_wrapper)
+        self.assertIn('LYRA_RELEASE_EDITION="kde"', kde_uploader)
+        self.assertIn('LYRA_RELEASE_LAYOUT="release-first"', kde_uploader)
         self.assertIn("--published-installer", builder)
         self.assertIn("obs-release.py health", builder)
         self.assertNotIn("openSUSE_Leap_16.0/", kiwi)
