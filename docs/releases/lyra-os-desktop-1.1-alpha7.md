@@ -17,7 +17,10 @@ para produção nem para computadores com dados sem backup.
 - compilações completas de FFmpeg e VLC fornecidas pelo Packman Essentials;
 - remoção de repositórios vazios ou sem alvo 16.1 da composição da imagem;
 - manutenção de Btrfs, Snapper, Secure Boot e recuperação pelo GRUB como
-  contratos bloqueantes da release.
+  contratos bloqueantes da release;
+- verificação mensal de checksums Btrfs com `btrfsmaintenance`; balance,
+  defrag e trim periódicos permanecem desativados para evitar escrita e I/O
+  inesperados.
 
 ## Qualificação obrigatória da nova base
 

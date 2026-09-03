@@ -55,6 +55,7 @@ EXPECTED_ACTIVE_UNITS = {
         "NetworkManager.service",
         "firewalld.service",
         "cups.service",
+        "btrfs-scrub.timer",
     ),
     "server": (
         "NetworkManager.service",
@@ -62,6 +63,15 @@ EXPECTED_ACTIVE_UNITS = {
         "sshd.service",
         "vega-web.service",
     ),
+}
+
+EXPECTED_DISABLED_UNITS = {
+    "desktop": (
+        "btrfs-balance.timer",
+        "btrfs-defrag.timer",
+        "btrfs-trim.timer",
+    ),
+    "server": (),
 }
 
 
@@ -386,6 +396,14 @@ def validate_first_boot(
             f"unit-{unit}",
             code == 0 and output == "active",
             f"state: {output or 'unknown'}",
+        )
+
+    for unit in EXPECTED_DISABLED_UNITS[profile]:
+        code, output = runner(["systemctl", "is-enabled", unit])
+        check(
+            f"unit-{unit}-disabled",
+            code != 0 and output == "disabled",
+            f"enablement: {output or 'unknown'} (expected disabled)",
         )
 
     if profile == "server":

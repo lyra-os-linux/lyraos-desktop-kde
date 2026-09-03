@@ -4,6 +4,18 @@
 imagem usa openSUSE Leap 16, GNOME, Btrfs/Snapper e o Lyra Installer em
 Rust/Tauri como único instalador.
 
+## Manutenção Btrfs
+
+A imagem inclui o `btrfsmaintenance` oficial da base e habilita somente o
+`btrfs-scrub.timer`, com execução mensal e prioridade de I/O `idle`. O scrub
+valida checksums de dados e metadados e pode recuperar metadados a partir do
+perfil `DUP`; dados no perfil `single` não possuem uma segunda cópia, portanto
+o mecanismo detecta corrupção mas não substitui backup.
+
+Balance, defrag e trim periódicos ficam desativados. A imagem já usa descarte
+assíncrono no mount do Btrfs, e uma movimentação periódica de blocos não deve
+ser introduzida sem necessidade e qualificação específicas.
+
 ## Instalador na sessão live
 
 O RPM `lyra-installer` fornece:

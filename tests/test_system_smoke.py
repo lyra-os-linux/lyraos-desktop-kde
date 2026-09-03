@@ -55,6 +55,8 @@ class SystemSmokeTests(unittest.TestCase):
         if arguments[:2] == ["systemctl", "is-active"]:
             return 0, "active"
         if arguments[:2] == ["systemctl", "is-enabled"]:
+            if arguments[-1] in system_smoke.EXPECTED_DISABLED_UNITS["desktop"]:
+                return 1, "disabled"
             return 0, "static"
         if arguments[:2] == ["systemctl", "--failed"]:
             return 0, ""
@@ -89,6 +91,41 @@ class SystemSmokeTests(unittest.TestCase):
         self.assertIn("display-manager.service", units)
         for implementation in ("gdm.service", "sddm.service", "lightdm.service"):
             self.assertNotIn(implementation, units)
+
+    def test_desktop_requires_only_the_safe_btrfs_maintenance_timer(self) -> None:
+        active = system_smoke.EXPECTED_ACTIVE_UNITS["desktop"]
+        disabled = system_smoke.EXPECTED_DISABLED_UNITS["desktop"]
+
+        self.assertIn("btrfs-scrub.timer", active)
+        self.assertEqual(
+            disabled,
+            (
+                "btrfs-balance.timer",
+                "btrfs-defrag.timer",
+                "btrfs-trim.timer",
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.create_installed_root(root)
+            report = system_smoke.validate_first_boot(
+                root=root,
+                username="alice",
+                environment={
+                    "XDG_CURRENT_DESKTOP": "KDE",
+                    "XDG_SESSION_TYPE": "wayland",
+                },
+                runner=self.runner,
+            )
+
+        checks = {item["id"]: item for item in report["checks"]}
+        self.assertEqual(checks["unit-btrfs-scrub.timer"]["status"], "passed")
+        for unit in disabled:
+            self.assertEqual(
+                checks[f"unit-{unit}-disabled"]["status"],
+                "passed",
+            )
 
     def test_real_root_fstab_verification_uses_cached_sudo(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

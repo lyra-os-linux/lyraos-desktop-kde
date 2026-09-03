@@ -149,6 +149,27 @@ visudo -cf /etc/sudoers.d/00-liveuser-nopasswd
 # zram-generator activates its own systemd generator at boot from
 # /etc/systemd/zram-generator.conf - no service to enable here.
 
+# Verify Btrfs checksums monthly on the live and installed systems.  Keep the
+# vendor configuration file complete and update only the policy values owned
+# by Lyra.  Scrub may repair metadata from its DUP copy; user data remain
+# single-profile, so detection does not replace backups.  Do not enable the
+# write-heavy balance/defrag jobs, and leave trim to the async-discard mount
+# policy instead of scheduling a second mechanism.
+if [ ! -r /etc/sysconfig/btrfsmaintenance ]; then
+    echo "btrfsmaintenance configuration is missing" >&2
+    exit 1
+fi
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_SCRUB_MOUNTPOINTS /
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_SCRUB_PERIOD monthly
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_SCRUB_PRIORITY idle
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_SCRUB_READ_ONLY false
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_BALANCE_PERIOD none
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_DEFRAG_PERIOD none
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_TRIM_PERIOD none
+baseUpdateSysConfig /etc/sysconfig/btrfsmaintenance BTRFS_ALLOW_CONCURRENCY false
+systemctl enable btrfsmaintenance-refresh.path btrfs-scrub.timer
+systemctl disable btrfs-balance.timer btrfs-defrag.timer btrfs-trim.timer
+
 # Flathub is shipped as a versioned remote definition in root/. Keeping
 # its URL and signing key in the source prevents a network fetch during
 # the build.

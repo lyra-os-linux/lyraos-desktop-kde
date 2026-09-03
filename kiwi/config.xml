@@ -244,6 +244,10 @@
       is what makes the GRUB panic-button rollback menu exist at all.
     -->
     <package name="btrfsprogs"/>
+    <!-- Keep checksum verification periodic on installed systems.  The image
+         config enables monthly scrub only; balance, defrag and trim remain
+         disabled to avoid unexpected write-heavy maintenance. -->
+    <package name="btrfsmaintenance"/>
     <package name="snapper"/>
     <!-- snapper only Recommends this package; onlyRequired would otherwise
          omit the plugin that creates pre/post snapshots for zypper. -->

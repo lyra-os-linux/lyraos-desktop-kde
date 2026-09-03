@@ -46,6 +46,42 @@ class ImagePolicyTests(unittest.TestCase):
         }
         self.assertIn("man", shared_image_packages)
 
+    def test_btrfs_scrub_is_monthly_without_write_heavy_maintenance(self) -> None:
+        root = ET.parse(ROOT / "kiwi/config.xml").getroot()
+        shared_image_packages = {
+            package.attrib["name"]
+            for packages in root.findall("packages")
+            if packages.attrib.get("type") == "image"
+            and "profiles" not in packages.attrib
+            for package in packages.findall("package")
+        }
+        self.assertIn("btrfsmaintenance", shared_image_packages)
+
+        config_sh = (ROOT / "kiwi/config.sh").read_text(encoding="utf-8")
+        maintenance = config_sh[
+            config_sh.index("# Verify Btrfs checksums monthly") :
+            config_sh.index("# Flathub is shipped")
+        ]
+        for setting in (
+            "BTRFS_SCRUB_MOUNTPOINTS /",
+            "BTRFS_SCRUB_PERIOD monthly",
+            "BTRFS_SCRUB_PRIORITY idle",
+            "BTRFS_SCRUB_READ_ONLY false",
+            "BTRFS_BALANCE_PERIOD none",
+            "BTRFS_DEFRAG_PERIOD none",
+            "BTRFS_TRIM_PERIOD none",
+            "BTRFS_ALLOW_CONCURRENCY false",
+        ):
+            self.assertIn(setting, maintenance)
+        self.assertIn(
+            "systemctl enable btrfsmaintenance-refresh.path btrfs-scrub.timer",
+            maintenance,
+        )
+        self.assertIn(
+            "systemctl disable btrfs-balance.timer btrfs-defrag.timer btrfs-trim.timer",
+            maintenance,
+        )
+
     def test_product_release_identity_is_owned_by_an_rpm(self) -> None:
         root = ET.parse(ROOT / "kiwi/config.xml").getroot()
         packages = {node.attrib["name"] for node in root.findall("packages/package")}
