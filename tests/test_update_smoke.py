@@ -85,6 +85,7 @@ class UpdateSmokeTests(unittest.TestCase):
             state = directory / "esp/update-state.json"
             self.create_root(root)
             runner = FixtureRunner()
+            runner.update_codes = [102]
 
             baseline = update_smoke.baseline(
                 root=root,
@@ -105,10 +106,42 @@ class UpdateSmokeTests(unittest.TestCase):
             self.assertEqual(verified["status"], "incomplete")
             prepared = update_smoke.prepare_rollback(state_path=state, runner=runner)
             self.assertEqual(prepared["status"], "incomplete")
+            self.assertIn(
+                [
+                    "snapper", "--no-dbus", "--config", "root", "--ambit",
+                    "classic", "rollback", "1",
+                ],
+                runner.calls,
+            )
             runner.kernel = "6.12.0-fixture"
             rolled_back = update_smoke.verify_rollback(root=root, state_path=state, runner=runner)
             self.assertEqual(rolled_back["status"], "passed")
             self.assertEqual(update_smoke.load_state(state)["phase"], "rollback-verified")
+
+    def test_update_without_reboot_can_be_verified_and_rolled_back(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            root = directory / "root"
+            state = directory / "esp/update-state.json"
+            self.create_root(root)
+            runner = FixtureRunner()
+
+            update_smoke.baseline(
+                root=root,
+                state_path=state,
+                runner=runner,
+                requested_snapshot=None,
+                restart=False,
+            )
+            updated = update_smoke.update_system(root=root, state_path=state, runner=runner)
+            self.assertIs(updated["facts"]["reboot_suggested"], False)
+
+            verified = update_smoke.verify_updated(root=root, state_path=state, runner=runner)
+            self.assertEqual(verified["status"], "incomplete")
+            self.assertIs(verified["facts"]["reboot_suggested"], False)
+            update_smoke.prepare_rollback(state_path=state, runner=runner)
+            rolled_back = update_smoke.verify_rollback(root=root, state_path=state, runner=runner)
+            self.assertEqual(rolled_back["status"], "passed")
 
     def test_package_manager_restart_and_reboot_codes_are_informational(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

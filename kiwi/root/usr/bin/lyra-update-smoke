@@ -387,20 +387,26 @@ def verify_updated(*, root: Path, state_path: Path, runner: Runner) -> dict[str,
     baseline_facts = state.get("baseline")
     if not isinstance(baseline_facts, dict):
         raise WorkflowError("baseline facts are missing from workflow state")
+    updated_facts = state.get("updated")
+    if not isinstance(updated_facts, dict):
+        raise WorkflowError("updated facts are missing from workflow state")
+    reboot_suggested = updated_facts.get("reboot_suggested") is True
     kernel_changed = (
         facts.get("kernel") != baseline_facts.get("kernel")
         and facts.get("kernel") != "unknown"
     )
     checks.append(
         {
-            "id": "updated-kernel-booted",
-            "status": "passed" if kernel_changed else "failed",
+            "id": "updated-boot-state",
+            "status": "passed" if kernel_changed or not reboot_suggested else "failed",
             "detail": (
+                f"reboot_suggested={str(reboot_suggested).lower()}, "
                 f"baseline={baseline_facts.get('kernel', 'unknown')}, "
                 f"running={facts.get('kernel', 'unknown')}"
             ),
         }
     )
+    facts["reboot_suggested"] = reboot_suggested
     if checks_pass(checks):
         state["phase"] = "updated-verified"
         state["updated_verified"] = facts
@@ -413,7 +419,10 @@ def prepare_rollback(*, state_path: Path, runner: Runner) -> dict[str, object]:
     require_phase(state, {"updated-verified"})
     snapshot = int(state["rollback_snapshot"])
     code, _ = runner(
-        ["snapper", "--no-dbus", "--config", "root", "rollback", str(snapshot)],
+        [
+            "snapper", "--no-dbus", "--config", "root", "--ambit", "classic",
+            "rollback", str(snapshot),
+        ],
         600,
     )
     checks = [
@@ -459,12 +468,16 @@ def verify_rollback(*, root: Path, state_path: Path, runner: Runner) -> dict[str
                 "detail": "mounted root is the Btrfs default subvolume",
             },
             {
-                "id": "kernel-update-covered",
+                "id": "update-path-covered",
                 "status": "passed"
-                if updated_facts.get("kernel") != baseline_facts.get("kernel")
-                and updated_facts.get("kernel") != "unknown"
+                if updated_facts.get("reboot_suggested") is False
+                or (
+                    updated_facts.get("kernel") != baseline_facts.get("kernel")
+                    and updated_facts.get("kernel") != "unknown"
+                )
                 else "failed",
                 "detail": (
+                    f"reboot_suggested={str(updated_facts.get('reboot_suggested')).lower()}, "
                     f"baseline={baseline_facts.get('kernel', 'unknown')}, "
                     f"updated={updated_facts.get('kernel', 'unknown')}"
                 ),
