@@ -512,6 +512,38 @@ def one(directory: Path, pattern: str, role: str) -> Path:
     return matches[0]
 
 
+def iso_source_commit(directory: Path, iso_path: Path, release_file: Path) -> str:
+    """Return the immutable build commit recorded beside the candidate ISO."""
+    build_manifest_path = one(
+        directory, f"{iso_path.name}.manifest.json", "ISO build manifest"
+    )
+    try:
+        build_manifest = json.loads(build_manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise PolicyError(
+            f"ISO build manifest is not valid JSON: {build_manifest_path}"
+        ) from error
+    if not isinstance(build_manifest, dict) or build_manifest.get("schema_version") != 1:
+        raise PolicyError("ISO build manifest has an unsupported schema")
+    recorded_iso = build_manifest.get("iso")
+    source = build_manifest.get("source")
+    if (
+        not isinstance(recorded_iso, dict)
+        or recorded_iso.get("filename") != iso_path.name
+        or recorded_iso.get("sha256") != sha256(iso_path)
+    ):
+        raise PolicyError("ISO build manifest does not match the candidate ISO")
+    if build_manifest.get("version") != version_id(release_file):
+        raise PolicyError("ISO build manifest does not match the release version")
+    if (
+        not isinstance(source, dict)
+        or source.get("dirty") is not False
+        or not re.fullmatch(r"[0-9a-f]{40}", str(source.get("commit", "")))
+    ):
+        raise PolicyError("ISO build manifest has an invalid source identity")
+    return str(source["commit"])
+
+
 def validate_passed_checks(name: str, result: dict[str, object]) -> None:
     checks = result.get("checks")
     if not isinstance(checks, list) or not checks:
@@ -669,6 +701,7 @@ def artifact_manifest(
         role: one(directory, *artifact_patterns[role])
         for role in required_roles
     }
+    source_commit = iso_source_commit(directory, roles["iso"], release_file)
     package_rows = [line.split("|") for line in roles["packages"].read_text(encoding="utf-8").splitlines() if line]
     if any(len(row) != 7 for row in package_rows):
         raise PolicyError("KIWI package manifest has an unexpected format")
@@ -702,7 +735,6 @@ def artifact_manifest(
     missing_results = sorted(required_results - set(test_results))
     if missing_results:
         raise PolicyError(f"required release evidence is missing: {missing_results}")
-    source_commit = git("rev-parse", "HEAD")
     source_dirty = bool(git("status", "--porcelain", "--untracked-files=normal"))
     if source_dirty:
         raise PolicyError("final release evidence requires a clean source commit")

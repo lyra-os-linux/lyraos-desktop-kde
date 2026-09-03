@@ -915,6 +915,21 @@ architecture = "x86_64"
 
     def create_artifacts(self, directory: Path) -> None:
         (directory / "lyra.iso").write_bytes(b"iso")
+        (directory / "lyra.iso.manifest.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "version": image_build.version_id(),
+                    "source": {"commit": "a" * 40, "dirty": False},
+                    "iso": {
+                        "filename": "lyra.iso",
+                        "sha256": image_build.sha256(directory / "lyra.iso"),
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         (directory / "lyra.packages").write_text(
             "fina|(none)|0.4.0|12.1|x86_64|obs://build.opensuse.org/"
             "home:rodrigosbrito:fina/repo/revision-fina|MIT\n",
@@ -1006,6 +1021,28 @@ architecture = "x86_64"
                 set(document["test_results"]), set(manifest.required_test_results)
             )
             self.assertFalse(document["source"]["dirty"])
+            self.assertEqual(document["source"]["commit"], "a" * 40)
+
+    def test_manifest_rejects_iso_build_manifest_with_wrong_checksum(self) -> None:
+        manifest = image_build.Manifest.load()
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            self.create_artifacts(directory)
+            build_manifest_path = directory / "lyra.iso.manifest.json"
+            build_manifest = json.loads(build_manifest_path.read_text(encoding="utf-8"))
+            build_manifest["iso"]["sha256"] = "0" * 64
+            build_manifest_path.write_text(
+                json.dumps(build_manifest) + "\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(
+                image_build.PolicyError, "does not match the candidate ISO"
+            ):
+                image_build.artifact_manifest(
+                    manifest,
+                    directory,
+                    directory / "manifest.json",
+                    self.create_test_results(manifest, directory),
+                )
 
     def test_alpha_manifest_accepts_checksum_without_detached_signature(self) -> None:
         manifest = image_build.Manifest.load()
