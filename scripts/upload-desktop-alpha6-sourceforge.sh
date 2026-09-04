@@ -10,15 +10,36 @@ ARTIFACT_DIR="$WORK_DIR/iso"
 EXPECTED_VERSION="${LYRA_EXPECTED_VERSION:-1.0-alpha.6}"
 RELEASE_LABEL="${LYRA_RELEASE_LABEL:-Desktop Alpha 6}"
 RELEASE_SLUG="${LYRA_RELEASE_SLUG:-alpha6}"
+RELEASE_EDITION="${LYRA_RELEASE_EDITION:-desktop}"
+RELEASE_LAYOUT="${LYRA_RELEASE_LAYOUT:-legacy}"
+VERIFY_DOWNLOAD="${LYRA_VERIFY_DOWNLOAD:-1}"
+REQUIRE_DECISION="${LYRA_REQUIRE_DECISION:-1}"
+CHECK_OPEN_BLOCKERS="${LYRA_CHECK_OPEN_BLOCKERS:-1}"
 COMMAND_NAME="${LYRA_COMMAND_NAME:-$0}"
 RELEASE_SERIES="$("$REPO_ROOT/scripts/release.py" field product_version)"
-REMOTE="rodrigobritosoa@frs.sourceforge.net:/home/frs/project/lyra/releases/$RELEASE_SERIES/desktop/$RELEASE_SLUG/"
-DOWNLOAD_URL="https://downloads.sourceforge.net/project/lyra/releases/$RELEASE_SERIES/desktop/$RELEASE_SLUG"
+case "$RELEASE_LAYOUT" in
+  legacy) RELEASE_PATH="$RELEASE_SERIES/$RELEASE_EDITION/$RELEASE_SLUG" ;;
+  release-first) RELEASE_PATH="$RELEASE_SERIES/$RELEASE_SLUG/$RELEASE_EDITION" ;;
+  *) echo "ERRO: layout SourceForge inválido: $RELEASE_LAYOUT" >&2; exit 2 ;;
+esac
+for setting in VERIFY_DOWNLOAD REQUIRE_DECISION CHECK_OPEN_BLOCKERS; do
+  value="${!setting}"
+  case "$value" in
+    0|1) ;;
+    *) echo "ERRO: $setting deve ser 0 ou 1." >&2; exit 2 ;;
+  esac
+done
+REMOTE="rodrigobritosoa@frs.sourceforge.net:/home/frs/project/lyra/releases/$RELEASE_PATH/"
+DOWNLOAD_URL="https://downloads.sourceforge.net/project/lyra/releases/$RELEASE_PATH"
 CHECK_ONLY=0
 DECISION_FILE=""
 
 usage() {
-  echo "Uso: $COMMAND_NAME [--check-only] --decision-file ARQUIVO.json" >&2
+  if [ "$REQUIRE_DECISION" -eq 1 ]; then
+    echo "Uso: $COMMAND_NAME [--check-only] --decision-file ARQUIVO.json" >&2
+  else
+    echo "Uso: $COMMAND_NAME [--check-only] [--decision-file ARQUIVO.json]" >&2
+  fi
 }
 
 while [ "$#" -gt 0 ]; do
@@ -30,16 +51,18 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
-[ -n "$DECISION_FILE" ] || {
+if [ "$REQUIRE_DECISION" -eq 1 ] && [ -z "$DECISION_FILE" ]; then
   echo "ERRO: registro formal de GO ausente." >&2
   usage
   exit 2
-}
-DECISION_FILE="$(readlink -f "$DECISION_FILE")"
-[ -s "$DECISION_FILE" ] || {
-  echo "ERRO: registro de GO ausente: $DECISION_FILE" >&2
-  exit 1
-}
+fi
+if [ -n "$DECISION_FILE" ]; then
+  DECISION_FILE="$(readlink -f "$DECISION_FILE")"
+  [ -s "$DECISION_FILE" ] || {
+    echo "ERRO: registro de GO ausente: $DECISION_FILE" >&2
+    exit 1
+  }
+fi
 
 cd "$REPO_ROOT"
 VERSION="$(./scripts/release.py field version_id)"
@@ -74,7 +97,7 @@ sha256sum -c "$PREFIX.iso.sha256"
 # uefi-secure-boot, rollback and hardware-matrix. Stage-aware additions are
 # read from the same policy used to create the evidence manifest.
 mapfile -t REQUIRED_EVIDENCE < <("$REPO_ROOT/scripts/image-build.py" required-test-results)
-python3 - "$PREFIX.evidence.json" "$DECISION_FILE" "$PREFIX" "${REQUIRED_EVIDENCE[@]}" <<'PY'
+python3 - "$PREFIX.evidence.json" "$PREFIX" "$DECISION_FILE" "${REQUIRED_EVIDENCE[@]}" <<'PY'
 import datetime
 import json
 import pathlib
@@ -82,8 +105,8 @@ import re
 import sys
 
 evidence = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-decision = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
-prefix = sys.argv[3]
+prefix = sys.argv[2]
+decision_path = sys.argv[3]
 required = set(sys.argv[4:])
 if not required:
     raise SystemExit("ERRO: política não informou evidências obrigatórias")
@@ -94,45 +117,51 @@ if set(evidence.get("test_results", {})) != required:
 if any(item.get("status") != "passed" for item in evidence["test_results"].values()):
     raise SystemExit("ERRO: há evidência obrigatória não aprovada")
 iso = evidence.get("artifacts", {}).get("iso", {})
-expected = {
-    "decision": "GO",
-    "source_commit": evidence.get("source", {}).get("commit"),
-    "iso_filename": iso.get("filename"),
-    "iso_sha256": iso.get("sha256"),
-    "evidence_manifest": f"{prefix}.evidence.json",
-}
-if decision.get("schema") != 1 or any(decision.get(key) != value for key, value in expected.items()):
-    raise SystemExit("ERRO: registro de GO não corresponde exatamente ao candidato")
-if not isinstance(decision.get("coordinator"), str) or not decision["coordinator"].strip():
-    raise SystemExit("ERRO: registro de GO sem coordenador")
-if not re.fullmatch(r"[0-9a-f]{40}", decision.get("source_commit", "")):
-    raise SystemExit("ERRO: commit inválido no registro de GO")
-if not re.fullmatch(r"[0-9a-f]{64}", decision.get("iso_sha256", "")):
-    raise SystemExit("ERRO: SHA-256 inválido no registro de GO")
-try:
-    decided_at = datetime.datetime.fromisoformat(
-        decision.get("decided_at_utc", "").replace("Z", "+00:00")
-    )
-except ValueError as error:
-    raise SystemExit("ERRO: horário UTC inválido no registro de GO") from error
-if decided_at.utcoffset() != datetime.timedelta(0):
-    raise SystemExit("ERRO: decisão deve registrar horário UTC")
-for field in ("accepted_p2_p3", "residual_risks"):
-    values = decision.get(field)
-    if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
-        raise SystemExit(f"ERRO: registro de GO sem lista válida: {field}")
+if decision_path:
+    decision = json.loads(pathlib.Path(decision_path).read_text(encoding="utf-8"))
+    expected = {
+        "decision": "GO",
+        "source_commit": evidence.get("source", {}).get("commit"),
+        "iso_filename": iso.get("filename"),
+        "iso_sha256": iso.get("sha256"),
+        "evidence_manifest": f"{prefix}.evidence.json",
+    }
+    if decision.get("schema") != 1 or any(decision.get(key) != value for key, value in expected.items()):
+        raise SystemExit("ERRO: registro de GO não corresponde exatamente ao candidato")
+    if not isinstance(decision.get("coordinator"), str) or not decision["coordinator"].strip():
+        raise SystemExit("ERRO: registro de GO sem coordenador")
+    if not re.fullmatch(r"[0-9a-f]{40}", decision.get("source_commit", "")):
+        raise SystemExit("ERRO: commit inválido no registro de GO")
+    if not re.fullmatch(r"[0-9a-f]{64}", decision.get("iso_sha256", "")):
+        raise SystemExit("ERRO: SHA-256 inválido no registro de GO")
+    try:
+        decided_at = datetime.datetime.fromisoformat(
+            decision.get("decided_at_utc", "").replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise SystemExit("ERRO: horário UTC inválido no registro de GO") from error
+    if decided_at.utcoffset() != datetime.timedelta(0):
+        raise SystemExit("ERRO: decisão deve registrar horário UTC")
+    for field in ("accepted_p2_p3", "residual_risks"):
+        values = decision.get(field)
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+            raise SystemExit(f"ERRO: registro de GO sem lista válida: {field}")
 PY
 
-OPEN_BLOCKERS="$(gh issue list --state open --label desktop --limit 200 \
-  --json number,title --jq '.[] | select(.title | test("\\[P[01]\\]"; "i")) | "#\\(.number) \\(.title)"')"
-[ -z "$OPEN_BLOCKERS" ] || {
-  echo "ERRO: há P0/P1 Desktop aberta; publicação bloqueada:" >&2
-  echo "$OPEN_BLOCKERS" >&2
-  exit 1
-}
+if [ "$CHECK_OPEN_BLOCKERS" -eq 1 ]; then
+  OPEN_BLOCKERS="$(gh issue list --state open --label desktop --limit 200 \
+    --json number,title --jq '.[] | select(.title | test("\\[P[01]\\]"; "i")) | "#\\(.number) \\(.title)"')"
+  [ -z "$OPEN_BLOCKERS" ] || {
+    echo "ERRO: há P0/P1 Desktop aberta; publicação bloqueada:" >&2
+    echo "$OPEN_BLOCKERS" >&2
+    exit 1
+  }
+fi
 
-install -m 0644 "$DECISION_FILE" "$ARTIFACT_DIR/$PREFIX.release-decision.json"
-FILES+=("$PREFIX.release-decision.json")
+if [ -n "$DECISION_FILE" ]; then
+  install -m 0644 "$DECISION_FILE" "$ARTIFACT_DIR/$PREFIX.release-decision.json"
+  FILES+=("$PREFIX.release-decision.json")
+fi
 if [ "$CHECK_ONLY" -eq 1 ]; then
   echo "Bundle $RELEASE_LABEL válido; nenhum arquivo foi enviado."
   exit 0
@@ -147,6 +176,11 @@ chmod 0600 "$KNOWN_HOSTS"
 rsync -avP --partial \
   -e "ssh -o UserKnownHostsFile=$KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
   "${FILES[@]}" "$REMOTE"
+
+if [ "$VERIFY_DOWNLOAD" -eq 0 ]; then
+  echo "Publicação $RELEASE_LABEL enviada para $REMOTE"
+  exit 0
+fi
 
 DOWNLOAD_DIR="$(mktemp -d "/tmp/lyra-desktop-$RELEASE_SLUG-download.XXXXXX")"
 trap 'rm -rf -- "$DOWNLOAD_DIR"' EXIT
