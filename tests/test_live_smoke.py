@@ -79,6 +79,9 @@ class LiveSmokeTests(unittest.TestCase):
             )
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["observations"]["network_connectivity"], "none")
+            check_ids = {item["id"] for item in report["checks"]}
+            self.assertIn("unit-display-manager.service", check_ids)
+            self.assertNotIn("unit-sddm.service", check_ids)
 
     def test_failed_unit_and_unreviewed_journal_block_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

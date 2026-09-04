@@ -185,10 +185,16 @@ def audit_system(root: Path, runner: Runner) -> tuple[list[dict[str, object]], d
     )
     check("grub-config", bool(grub_content), "/boot/grub2/grub.cfg exists")
     grub_theme = rooted(root, "/usr/share/grub/themes/Lyra-OS/theme.txt")
+    theme_packaged = grub_theme.is_file()
+    theme_configured = "Lyra-OS/theme.txt" in grub_content
     check(
         "grub-theme",
-        grub_theme.is_file() and "Lyra-OS/theme.txt" in grub_content,
-        "packaged Lyra-OS theme is active in generated GRUB config",
+        theme_configured if theme_packaged else not theme_configured,
+        (
+            "packaged Lyra-OS theme is active in generated GRUB config"
+            if theme_packaged
+            else "edition does not package the Lyra-OS GRUB theme and the generated config does not reference it"
+        ),
     )
 
     code, default_output = runner(["btrfs", "subvolume", "get-default", "/"], 30)

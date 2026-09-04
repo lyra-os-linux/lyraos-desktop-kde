@@ -118,6 +118,54 @@ class UpdateSmokeTests(unittest.TestCase):
             self.assertEqual(rolled_back["status"], "passed")
             self.assertEqual(update_smoke.load_state(state)["phase"], "rollback-verified")
 
+    def test_baseline_accepts_edition_without_packaged_grub_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            root = directory / "root"
+            state = directory / "esp/update-state.json"
+            self.create_root(root)
+            (root / "usr/share/grub/themes/Lyra-OS/theme.txt").unlink()
+            (root / "boot/grub2/grub.cfg").write_text(
+                "menuentry 'Lyra OS' {}\n", encoding="utf-8"
+            )
+
+            report = update_smoke.baseline(
+                root=root,
+                state_path=state,
+                runner=FixtureRunner(),
+                requested_snapshot=None,
+                restart=False,
+            )
+
+            grub_theme = next(
+                item for item in report["checks"] if item["id"] == "grub-theme"
+            )
+            self.assertEqual(report["status"], "incomplete")
+            self.assertEqual(grub_theme["status"], "passed")
+            self.assertIn("does not package", grub_theme["detail"])
+
+    def test_baseline_rejects_reference_to_missing_grub_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            root = directory / "root"
+            state = directory / "esp/update-state.json"
+            self.create_root(root)
+            (root / "usr/share/grub/themes/Lyra-OS/theme.txt").unlink()
+
+            report = update_smoke.baseline(
+                root=root,
+                state_path=state,
+                runner=FixtureRunner(),
+                requested_snapshot=None,
+                restart=False,
+            )
+
+            grub_theme = next(
+                item for item in report["checks"] if item["id"] == "grub-theme"
+            )
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(grub_theme["status"], "failed")
+
     def test_update_without_reboot_can_be_verified_and_rolled_back(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
