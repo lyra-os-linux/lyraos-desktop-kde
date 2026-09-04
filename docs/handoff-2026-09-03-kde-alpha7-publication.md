@@ -151,3 +151,24 @@ em `/tmp/kde-alpha7-evidence`. A suíte completa do repositório passou com 198
 testes. O próximo passo é versionar as correções dos helpers, gerar o bundle
 final em uma worktree limpa no commit da ISO (`1901a71`), executar o
 `check-only` duas vezes e somente então publicar.
+
+## Publicação concluída em 2026-09-04
+
+- As correções dos helpers foram versionadas em `0ea99a9`.
+- O uploader passou a respeitar as opções específicas da edição KDE em
+  `9bac8fc`.
+- A seleção explícita da nota de release foi corrigida em `cf38912`.
+- A suíte completa continuou verde com 198 testes após cada correção.
+- O manifesto final foi gerado em worktree limpa no commit `1901a71` e
+  registra os sete resultados obrigatórios como `passed`.
+- O checksum da ISO permaneceu
+  `b22b9359a4313eca6d81e780f4445b2d9b32cf9b894ad5943bdc4b38d57cec7b`.
+- O uploader passou duas vezes em `--check-only` antes do envio.
+- Os dez artefatos foram publicados em
+  `https://sourceforge.net/projects/lyra/files/releases/1.1/alpha7/kde/`.
+- O feed público do SourceForge listou os dez arquivos e o checksum baixado
+  do espelho público correspondeu ao checksum local da candidata.
+
+A publicação KDE 1.1 Alpha 7 está concluída. A ISO, as evidências e o disco da
+instalação validada permanecem preservados nos diretórios temporários
+registrados neste documento.
