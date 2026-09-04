@@ -13,6 +13,7 @@ ARTIFACTS_ONLY=0
 EXPECTED_VERSION="${LYRA_EXPECTED_VERSION:-1.0-alpha.6}"
 RELEASE_LABEL="${LYRA_RELEASE_LABEL:-Desktop Alpha 6}"
 COMMAND_NAME="${LYRA_COMMAND_NAME:-$0}"
+RELEASE_NOTES="${LYRA_RELEASE_NOTES:-$REPO_ROOT/docs/releases/lyra-os-desktop-$EXPECTED_VERSION.md}"
 
 usage() {
   cat <<EOF
@@ -110,7 +111,7 @@ install -m 0644 "$VERIFIED_SOURCE" "$ARTIFACT_DIR/$PREFIX.verified"
   --output-dir "$ARTIFACT_DIR" \
   --commit "$COMMIT"
 install -m 0644 \
-  "$REPO_ROOT/docs/releases/lyra-os-desktop-$EXPECTED_VERSION.md" \
+  "$RELEASE_NOTES" \
   "$ARTIFACT_DIR/README.md"
 (cd "$ARTIFACT_DIR" && sha256sum -c "$PREFIX.iso.sha256")
 

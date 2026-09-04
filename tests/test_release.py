@@ -182,6 +182,11 @@ class RepositoryMetadataTests(unittest.TestCase):
         kiwi = (ROOT / "kiwi/config.xml").read_text(encoding="utf-8")
 
         self.assertIn('LYRA_EXPECTED_VERSION="1.1-alpha.7"', wrapper)
+        self.assertIn('LYRA_RELEASE_LABEL="KDE Alpha 7"', wrapper)
+        self.assertIn(
+            'LYRA_RELEASE_NOTES="$SCRIPT_DIR/../docs/releases/lyra-os-desktop-1.1-alpha7.md"',
+            wrapper,
+        )
         self.assertIn('LYRA_RELEASE_SLUG="alpha7"', uploader_wrapper)
         self.assertIn('LYRA_RELEASE_EDITION="kde"', kde_uploader)
         self.assertIn('LYRA_RELEASE_LAYOUT="release-first"', kde_uploader)
