@@ -34,6 +34,16 @@ fn main() {
         }
     };
 
+    // Treat direct service clients exactly like the UI. Reject account
+    // protocol delimiters before discovery, planning or any disk operation.
+    if let Err(errors) = request.config.validate() {
+        emit(ExecutionEvent::Failed {
+            step: "validação da configuração".to_string(),
+            message: errors.join(", "),
+        });
+        std::process::exit(1);
+    }
+
     // Package/image regressions must be caught before storage discovery and,
     // critically, before wipefs/sgdisk can touch the selected disk.
     let missing_binaries = missing_allowed_binaries();

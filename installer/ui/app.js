@@ -288,10 +288,14 @@ function validate(){
   const fullName=document.querySelector('#full-name').value.trim();
   const password=document.querySelector('#password').value;
   const confirm=document.querySelector('#password-confirm').value;
+  const bytes=value=>new TextEncoder().encode(value).length;
   if(!fullName) errors.push('validation.fullNameRequired');
+  else if(/[\0:\n]/.test(fullName)||bytes(fullName)>131071) errors.push('validation.invalidFullName');
   if(!/^[a-z][a-z0-9_-]{0,31}$/.test(username)||username==='root') errors.push('validation.invalidUsername');
   if(!/^[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9]$/.test(hostname)) errors.push('validation.invalidHostname');
-  if(password.length<8) errors.push('validation.passwordTooShort');
+  if([...password].length<8) errors.push('validation.passwordTooShort');
+  if(/[\0\n]/.test(password)) errors.push('validation.invalidPassword');
+  if(bytes(username)+bytes(password)+2>8191) errors.push('validation.passwordTooLong');
   if(password!==confirm) errors.push('validation.passwordMismatch');
   document.querySelector('#validation').textContent=errors.map(key=>i18n.t(key)).join(' · ');
   return errors.length===0;
