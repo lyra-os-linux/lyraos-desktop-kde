@@ -24,6 +24,17 @@ jobs:
         run: cargo test --locked -p lyra-installer-core -p lyra-installer-service
       - name: Check Node for behavioral account-form tests
         run: node --version
+      - name: Install disposable Btrfs VM dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 cpio btrfs-progs e2fsprogs kmod linux-image-virtual
+      - name: Qualify mount cleanup with real Btrfs, faults and cancellation
+        run: |
+          vm_kernel="$(find /boot -maxdepth 1 -name 'vmlinuz-*' | sort -V | tail -n 1)"
+          test -n "$vm_kernel"
+          sudo install -m 0644 "$vm_kernel" "$RUNNER_TEMP/installer-mount-kernel"
+          vm_version="${vm_kernel##*/vmlinuz-}"
+          python3 scripts/check-installer-mount-vm.py --kernel "$RUNNER_TEMP/installer-mount-kernel" --modules-dir "/lib/modules/$vm_version"
       - name: Validate image and release contracts
         env:
           PYTHONDONTWRITEBYTECODE: "1"

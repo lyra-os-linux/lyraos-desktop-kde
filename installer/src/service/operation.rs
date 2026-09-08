@@ -71,6 +71,12 @@ pub enum OperationError {
     /// than silently doing nothing.
     NotImplemented(String),
     Io(String),
+    /// A step failed and its internal compensation failed too. Keep the
+    /// original failure first without hiding that resources may remain held.
+    Cleanup {
+        operation: Box<OperationError>,
+        cleanup: Box<OperationError>,
+    },
 }
 
 impl From<ExecutorError> for OperationError {
@@ -85,6 +91,9 @@ impl fmt::Display for OperationError {
             OperationError::Executor(error) => write!(f, "{error}"),
             OperationError::NotImplemented(reason) => write!(f, "não implementado: {reason}"),
             OperationError::Io(reason) => write!(f, "erro de E/S: {reason}"),
+            OperationError::Cleanup { operation, cleanup } => {
+                write!(f, "{operation}; falha na limpeza: {cleanup}")
+            }
         }
     }
 }
@@ -96,6 +105,8 @@ impl fmt::Display for OperationError {
 pub trait PrivilegedOperation {
     /// Human-readable description surfaced in `ExecutionEvent::Step`.
     fn describe(&self) -> String;
+    /// Compensate partial work internally before returning an error: the
+    /// engine calls `undo` only for operations that completed successfully.
     fn perform(&self, executor: &dyn Executor) -> Result<(), OperationError>;
     /// Best-effort compensating action, run in reverse order over every
     /// operation that already succeeded — always, whether the run as a

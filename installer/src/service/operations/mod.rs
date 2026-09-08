@@ -19,6 +19,8 @@ use super::executor::Executor;
 use super::operation::{ArgvCommand, OperationError, PrivilegedOperation};
 
 mod deploy;
+#[cfg(test)]
+mod mount_cleanup_tests;
 
 /// Where the target filesystem tree ends up mounted during install — tmpfs,
 /// ephemeral, same convention as the live squashfs's own `/run/overlay/live`.
@@ -460,34 +462,51 @@ impl PrivilegedOperation for CreateSubvolumes {
             args: vec![path_str(&self.partition), path_str(&self.staging)],
         })?;
 
-        for subvolume in &self.subvolumes {
-            let leaf = self
-                .staging
-                .join(subvolume.subvolume.trim_start_matches('/'));
-            if let Some(parent) = leaf.parent() {
-                fs::create_dir_all(parent).map_err(io_error)?;
-            }
-            executor.run(&ArgvCommand {
-                binary: "btrfs".to_string(),
-                args: vec![
-                    "subvolume".to_string(),
-                    "create".to_string(),
-                    path_str(&leaf),
-                ],
-            })?;
-            if subvolume.nodatacow {
+        // The engine records only successful operations for unwind. Every
+        // fallible step after this mount must therefore stay inside this
+        // closure, so an early return still reaches the matching unmount.
+        let creation = (|| -> Result<(), OperationError> {
+            for subvolume in &self.subvolumes {
+                let leaf = self
+                    .staging
+                    .join(subvolume.subvolume.trim_start_matches('/'));
+                if let Some(parent) = leaf.parent() {
+                    fs::create_dir_all(parent).map_err(io_error)?;
+                }
                 executor.run(&ArgvCommand {
-                    binary: "chattr".to_string(),
-                    args: vec!["+C".to_string(), path_str(&leaf)],
+                    binary: "btrfs".to_string(),
+                    args: vec![
+                        "subvolume".to_string(),
+                        "create".to_string(),
+                        path_str(&leaf),
+                    ],
                 })?;
+                if subvolume.nodatacow {
+                    executor.run(&ArgvCommand {
+                        binary: "chattr".to_string(),
+                        args: vec!["+C".to_string(), path_str(&leaf)],
+                    })?;
+                }
             }
-        }
 
-        executor.run(&ArgvCommand {
-            binary: "umount".to_string(),
-            args: vec![path_str(&self.staging)],
-        })?;
-        Ok(())
+            Ok(())
+        })();
+
+        let cleanup = executor
+            .run(&ArgvCommand {
+                binary: "umount".to_string(),
+                args: vec![path_str(&self.staging)],
+            })
+            .map(|_| ())
+            .map_err(OperationError::from);
+        match (creation, cleanup) {
+            (Err(operation), Err(cleanup)) => Err(OperationError::Cleanup {
+                operation: Box::new(operation),
+                cleanup: Box::new(cleanup),
+            }),
+            (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+            (Ok(()), Ok(())) => Ok(()),
+        }
     }
 }
 
@@ -721,10 +740,10 @@ mod tests {
     /// Self-cleaning writable directory under `/tmp` — real operations do
     /// real `fs::create_dir_all`/`fs::write`, so tests need somewhere
     /// writable by a non-root user, unlike the real `/run/lyra-installer`.
-    struct TempRoot(PathBuf);
+    pub(super) struct TempRoot(pub(super) PathBuf);
 
     impl TempRoot {
-        fn new(label: &str) -> Self {
+        pub(super) fn new(label: &str) -> Self {
             static COUNTER: AtomicU64 = AtomicU64::new(0);
             let n = COUNTER.fetch_add(1, Ordering::SeqCst);
             let path = std::env::temp_dir().join(format!(
@@ -759,7 +778,7 @@ mod tests {
 
     const LARGE: u64 = 40 * 1024 * 1024 * 1024;
 
-    fn whole_disk_plan_with_new_esp() -> (InstallPlan, StorageSnapshot) {
+    pub(super) fn whole_disk_plan_with_new_esp() -> (InstallPlan, StorageSnapshot) {
         let snapshot = StorageSnapshot {
             uefi: true,
             disks: vec![disk("sda", LARGE)],
