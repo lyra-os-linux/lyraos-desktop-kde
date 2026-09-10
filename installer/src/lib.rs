@@ -143,15 +143,11 @@ impl InstallConfig {
         if !valid_hostname(&self.hostname) {
             errors.push("validation.invalidHostname");
         }
-        if self.full_name.trim().is_empty() {
-            errors.push("validation.fullNameRequired");
-        }
-        if !valid_username(&self.username) {
-            errors.push("validation.invalidUsername");
-        }
-        if self.password.chars().count() < 8 {
-            errors.push("validation.passwordTooShort");
-        }
+        errors.extend(validate_account(
+            &self.full_name,
+            &self.username,
+            &self.password,
+        ));
 
         if errors.is_empty() {
             Ok(())
@@ -159,6 +155,50 @@ impl InstallConfig {
             Err(errors)
         }
     }
+}
+
+// Linux permits at most 32 pages per argv string, including its NUL. The
+// supported x86_64 image uses 4 KiB pages. chpasswd (shadow/glibc) reads each
+// username:password\n record into BUFSIZ=8192, including the final NUL.
+const MAX_ACCOUNT_COMMENT_BYTES: usize = 128 * 1024 - 1;
+const MAX_CHPASSWD_RECORD_BYTES: usize = 8191;
+
+pub(crate) fn validate_account(
+    full_name: &str,
+    username: &str,
+    password: &str,
+) -> Vec<&'static str> {
+    let mut errors = Vec::new();
+    if full_name.trim().is_empty() {
+        errors.push("validation.fullNameRequired");
+    } else if full_name.len() > MAX_ACCOUNT_COMMENT_BYTES
+        || full_name
+            .bytes()
+            .any(|byte| matches!(byte, 0 | b':' | b'\n'))
+    {
+        // useradd -c rejects ':' and LF; exec cannot carry an embedded NUL.
+        errors.push("validation.invalidFullName");
+    }
+    if !valid_username(username) {
+        errors.push("validation.invalidUsername");
+    }
+    if password.chars().count() < 8 {
+        errors.push("validation.passwordTooShort");
+    }
+    if password.bytes().any(|byte| matches!(byte, 0 | b'\n')) {
+        // LF starts another account record. NUL truncates C/PAM strings.
+        // Colons, spaces and Unicode are password data, not delimiters here.
+        errors.push("validation.invalidPassword");
+    }
+    if username
+        .len()
+        .saturating_add(password.len())
+        .saturating_add(2)
+        > MAX_CHPASSWD_RECORD_BYTES
+    {
+        errors.push("validation.passwordTooLong");
+    }
+    errors
 }
 
 fn valid_hostname(value: &str) -> bool {
@@ -250,6 +290,82 @@ mod tests {
     #[test]
     fn accepts_a_complete_configuration() {
         assert_eq!(valid_config().validate(), Ok(()));
+    }
+
+    #[test]
+    fn account_protocol_rejects_extra_records_and_c_string_truncation() {
+        for password in [
+            "valid-pass\nroot:other-pass",
+            "valid-pass\r\nroot:other-pass",
+            "valid-pass\0suffix",
+        ] {
+            let mut config = valid_config();
+            config.password = password.into();
+            assert!(
+                config
+                    .validate()
+                    .unwrap_err()
+                    .contains(&"validation.invalidPassword")
+            );
+        }
+        for name in ["Name:extra-field", "Name\nextra-record", "Name\0truncated"] {
+            let mut config = valid_config();
+            config.full_name = name.into();
+            assert!(
+                config
+                    .validate()
+                    .unwrap_err()
+                    .contains(&"validation.invalidFullName")
+            );
+        }
+    }
+
+    #[test]
+    fn account_protocol_preserves_valid_password_data_and_unicode_names() {
+        let mut config = valid_config();
+        config.full_name = "María D’Ávila, 李".into();
+        for password in [
+            "  pass:word  ",
+            "quotes'\"\\$word",
+            "é🔑senha-segura",
+            "password\rdata",
+            "password\u{2028}data",
+        ] {
+            config.password = password.into();
+            assert_eq!(config.validate(), Ok(()));
+        }
+    }
+
+    #[test]
+    fn account_text_limits_count_encoded_bytes_and_the_complete_chpasswd_record() {
+        let mut config = valid_config();
+        let available = MAX_CHPASSWD_RECORD_BYTES - config.username.len() - 2;
+        config.password = "a".repeat(available);
+        assert_eq!(config.validate(), Ok(()));
+        config.password.push('a');
+        assert!(
+            config
+                .validate()
+                .unwrap_err()
+                .contains(&"validation.passwordTooLong")
+        );
+        config.password = "é".repeat(available / 2 + 1);
+        assert!(
+            config
+                .validate()
+                .unwrap_err()
+                .contains(&"validation.passwordTooLong")
+        );
+        config.password = "valid-password".into();
+        config.full_name = "a".repeat(MAX_ACCOUNT_COMMENT_BYTES);
+        assert_eq!(config.validate(), Ok(()));
+        config.full_name.push('a');
+        assert!(
+            config
+                .validate()
+                .unwrap_err()
+                .contains(&"validation.invalidFullName")
+        );
     }
 
     #[test]

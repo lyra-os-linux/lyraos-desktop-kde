@@ -567,6 +567,10 @@ impl PrivilegedOperation for CreateUser {
     }
 
     fn perform(&self, executor: &dyn Executor) -> Result<(), OperationError> {
+        let errors = crate::validate_account(&self.full_name, &self.username, &self.password);
+        if !errors.is_empty() {
+            return Err(OperationError::Io(errors.join(", ")));
+        }
         let home = self.target_root.join("home").join(&self.username);
         if home.exists() {
             return Err(OperationError::Io(format!(
@@ -1759,6 +1763,42 @@ mod tests {
     }
 
     #[test]
+    fn create_user_rejects_protocol_delimiters_before_accessing_the_target() {
+        for (name, password, expected) in [
+            (
+                "Lyra User",
+                "valid-pass\nroot:other-pass",
+                "validation.invalidPassword",
+            ),
+            (
+                "Lyra User",
+                "valid-pass\0suffix",
+                "validation.invalidPassword",
+            ),
+            (
+                "Name:extra-field",
+                "valid-password",
+                "validation.invalidFullName",
+            ),
+        ] {
+            let temp = TempRoot::new("reject-account");
+            let op = CreateUser {
+                target_root: temp.0.join("does-not-exist"),
+                full_name: name.into(),
+                username: "lyra".into(),
+                password: password.into(),
+            };
+            let executor = FakeExecutor::new();
+            assert_eq!(
+                op.perform(&executor),
+                Err(OperationError::Io(expected.into()))
+            );
+            assert!(executor.calls().is_empty());
+            assert!(!op.target_root.exists());
+        }
+    }
+
+    #[test]
     fn create_user_sends_the_password_via_stdin_never_as_an_argument() {
         let temp = TempRoot::new("create-user");
         write_group_fixture(&temp.0, USER_SUPPLEMENTARY_GROUPS);
@@ -1836,7 +1876,11 @@ mod tests {
 
         let error = op.perform(&executor).unwrap_err();
 
-        assert!(error.to_string().contains("home já existe antes de useradd"));
+        assert!(
+            error
+                .to_string()
+                .contains("home já existe antes de useradd")
+        );
         assert!(executor.calls().is_empty());
     }
 

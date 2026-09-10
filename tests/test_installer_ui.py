@@ -136,6 +136,9 @@ class InstallerUiTests(unittest.TestCase):
         self.assertIn("errors.map(key=>i18n.t(key))", validation)
         for key in (
             "fullNameRequired",
+            "invalidFullName",
+            "invalidPassword",
+            "passwordTooLong",
             "invalidUsername",
             "invalidHostname",
             "passwordTooShort",

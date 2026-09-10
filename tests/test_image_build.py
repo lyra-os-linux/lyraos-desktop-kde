@@ -642,7 +642,12 @@ class ImagePolicyTests(unittest.TestCase):
             base = [sys.executable, str(tool), "--trace", str(trace), "--uuid", "12345678-1234-4234-8234-123456789abc", "--disk", str(disk), "--nvram", str(nvram)]
             subprocess.run([*base, "--mode", "live"], check=True); subprocess.run([*base, "--mode", "installed"], check=True)
             document = json.loads(trace.read_text(encoding="utf-8")); self.assertEqual(document["status"], "in-progress"); self.assertEqual(document["qemu_launch_count"], 2)
-            disk.unlink(); disk.write_bytes(b"replacement")
+            # Keep the old inode allocated: unlink/recreate can immediately
+            # reuse it on ext4, making this replacement fixture nondeterministic.
+            old_disk = root / "previous-disk"
+            disk.rename(old_disk)
+            disk.write_bytes(b"replacement")
+            self.assertNotEqual(disk.stat().st_ino, old_disk.stat().st_ino)
             self.assertNotEqual(subprocess.run([*base, "--mode", "installed"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode, 0)
 
     def test_vm_helper_summarizes_rehearsal_without_launching_qemu(self) -> None:
