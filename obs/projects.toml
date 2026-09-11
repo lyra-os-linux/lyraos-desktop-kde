@@ -73,10 +73,15 @@ packages = [
   "beam",
   "lyra-fish-productivity",
   "lyra-installer",
+  "lyra-icons",
+  "lyra-release",
   "lyra-upgrade",
   "linuxtoys",
   "lyra-welcome",
   "lyra-theme",
+  "lyra-nautilus-branding",
+  "libreoffice-branding-Lyra",
+  "lyra-wallpapers",
   "nvm-fish",
   "postgres-draco",
   "sheliak",
@@ -100,7 +105,7 @@ id = "vega"
 release = "home:rodrigosbrito:vega"
 staging = "home:rodrigosbrito:vega:staging"
 iso_consumer = true
-packages = ["vega-cli", "vega-gtk", "vega-web", "vegad"]
+packages = ["vega-cli", "vega-gtk", "vega-qt", "vega-web", "vega-xfce", "vegad"]
 
 [[projects.targets]]
 name = "openSUSE_Leap_16.1"
@@ -108,6 +113,13 @@ upstream_project = "openSUSE:Leap:16.1"
 upstream_repository = "standard"
 architectures = ["x86_64"]
 iso_consumer = true
+
+[[projects.targets]]
+name = "openSUSE_Tumbleweed"
+upstream_project = "openSUSE:Factory"
+upstream_repository = "snapshot"
+architectures = ["x86_64"]
+iso_consumer = false
 
 [[projects]]
 id = "fina"
