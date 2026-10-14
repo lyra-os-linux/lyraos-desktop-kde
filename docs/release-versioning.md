@@ -58,6 +58,6 @@ da geração 1.x são distintos. Não há promessa de EOL ou suporte prolongado 
 Lyra sem política formal e sustentável.
 
 O Lyra OS 1.1 terá suporte comunitário, sem prazo contratual ou EOL prometido.
-O lançamento está previsto para **20 de fevereiro de 2027**, sempre condicionado
+O lançamento está previsto para **5 de novembro de 2026**, sempre condicionado
 ao gate completo. Artefatos legados serão preservados e republicados com nomes
 semânticos, mantendo checksums, assinaturas e proveniência verificáveis.

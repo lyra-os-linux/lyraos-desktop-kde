@@ -191,8 +191,9 @@ antiga vibrante azul-safira→violeta):
   ganhos compensarem os riscos, com benefício, impacto, testes de regressão e
   plano de reversão registrados. A RC1 inicia o congelamento estrito.
 - O cronograma canônico e os critérios de promoção ficam em
-  `docs/release-versioning.md`; o buffer final vai até aproximadamente 16 de
-  fevereiro de 2027, sempre priorizando qualidade sobre prazo.
+  `docs/release-versioning.md`; o lançamento está previsto para 5 de novembro
+  de 2026, dois dias após o GA do Leap 16.1, sempre priorizando qualidade sobre
+  prazo.
 - O instalador opcional pós-instalação de driver NVIDIA via Vega foi concluído
   e validado na Desktop Alpha 5. A variante de ISO NVIDIA foi cancelada: o
   produto mantém uma única ISO Desktop.
