@@ -93,13 +93,16 @@ class RepositoryMetadataTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("20/09/2026", text, path)
 
-    def test_versioning_policy_separates_product_base_and_build(self) -> None:
+    def test_versioning_policy_follows_the_leap_base(self) -> None:
         versioning = (ROOT / "docs/release-versioning.md").read_text(encoding="utf-8")
-        self.assertIn("MAJOR.MINOR.PATCH", versioning)
-        self.assertIn("Lyra OS 1 — Odisseia", versioning)
+        release = Release.from_file()
+        self.assertEqual(release.product_version, release.base_version)
+        self.assertIn("MAJOR.MINOR[.PATCH]", versioning)
+        self.assertIn("segue a\nversão do openSUSE Leap", versioning)
+        self.assertIn("Lyra OS 16 — Odisseia", versioning)
         self.assertIn("openSUSE Leap 16.1", versioning)
         self.assertIn("BUILD_ID", versioning)
-        self.assertIn("independente", versioning)
+        self.assertNotIn("Lyra OS 1 — Odisseia", versioning)
         self.assertNotIn("ano.mês", versioning)
 
     def test_release_artifact_signing_starts_at_beta1(self) -> None:
@@ -163,7 +166,7 @@ class RepositoryMetadataTests(unittest.TestCase):
         self.assertNotIn("iso.sha256.asc", uploader)
 
     def test_alpha7_release_uses_leap_16_1_and_preserves_full_evidence_gate(self) -> None:
-        self.assertEqual(Release.from_file().version_id, "1.1-alpha.7")
+        self.assertEqual(Release.from_file().version_id, "16.1-alpha.7")
         wrapper = (ROOT / "scripts/build-desktop-alpha7.sh").read_text(
             encoding="utf-8"
         )
