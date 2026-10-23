@@ -42,12 +42,12 @@ INSTALLER_APP_ID = "org.lyraos.LyraInstaller"
 INSTALLER_EXEC = "/usr/bin/lyra-install-lock /usr/bin/lyra-installer"
 INSTALLER_TRY_EXEC = "/usr/bin/lyra-installer"
 INSTALLER_WM_CLASS = "lyra-installer"
-ALPHA8_TEST_RESULTS = {
-    "upgrade-rehearsal",
-    "eca-digital",
-    "i18n",
-    "feature-freeze",
-}
+# Alpha 8 plan (lyraos-desktop#28, approved 2026-10-07), adopted by this edition
+# with ADR 0017: new installation only, VM-only testing. The hardware matrix and
+# the upgrade rehearsal are not required; ECA Digital and the feature freeze are
+# declared in the release notes instead of structured evidence.
+ALPHA8_TEST_RESULTS = {"i18n"}
+ALPHA8_RETIRED_TEST_RESULTS = {"hardware-matrix"}
 SUPPORTED_LOCALES = ["en-US", "pt-BR", "es-ES"]
 
 
@@ -194,6 +194,7 @@ def required_test_result_names(manifest: Manifest, release_file: Path) -> tuple[
     required = set(manifest.required_test_results)
     if release["stage"] != "alpha" or int(release["iteration"]) >= 8:
         required.update(ALPHA8_TEST_RESULTS)
+        required -= ALPHA8_RETIRED_TEST_RESULTS
     return tuple(sorted(required))
 
 

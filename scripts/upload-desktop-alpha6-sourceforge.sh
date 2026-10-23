@@ -10,11 +10,24 @@ ARTIFACT_DIR="$WORK_DIR/iso"
 EXPECTED_VERSION="${LYRA_EXPECTED_VERSION:-1.0-alpha.6}"
 RELEASE_LABEL="${LYRA_RELEASE_LABEL:-Desktop Alpha 6}"
 RELEASE_SLUG="${LYRA_RELEASE_SLUG:-alpha6}"
+RELEASE_SIGNING_FINGERPRINT="01B63EEDBE6B079126A0116EFA7353A131ECEFEB"
+verify_release_signature() {
+  local signature="$1" signed_file="$2" valid_fingerprint
+  valid_fingerprint="$(gpg --batch --status-fd 1 --verify "$signature" "$signed_file" 2>/dev/null \
+    | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { print $3 }')"
+  [ "$valid_fingerprint" = "$RELEASE_SIGNING_FINGERPRINT" ] || {
+    echo "ERRO: assinatura não pertence à chave oficial $RELEASE_SIGNING_FINGERPRINT." >&2
+    exit 1
+  }
+}
 RELEASE_EDITION="${LYRA_RELEASE_EDITION:-desktop}"
 RELEASE_LAYOUT="${LYRA_RELEASE_LAYOUT:-legacy}"
 VERIFY_DOWNLOAD="${LYRA_VERIFY_DOWNLOAD:-1}"
 REQUIRE_DECISION="${LYRA_REQUIRE_DECISION:-1}"
 CHECK_OPEN_BLOCKERS="${LYRA_CHECK_OPEN_BLOCKERS:-1}"
+ISSUE_REPOSITORY="${LYRA_ISSUE_REPOSITORY:-lyra-os-linux/lyraos-desktop}"
+# Empty means every open issue of ISSUE_REPOSITORY, for editions without a label.
+BLOCKER_LABEL="${LYRA_BLOCKER_LABEL-desktop}"
 COMMAND_NAME="${LYRA_COMMAND_NAME:-$0}"
 RELEASE_SERIES="$("$REPO_ROOT/scripts/release.py" field product_version)"
 case "$RELEASE_LAYOUT" in
@@ -71,6 +84,7 @@ ISO_NAME="$(./scripts/release.py field iso_filename)"
   echo "ERRO: release.toml não aponta para $EXPECTED_VERSION." >&2
   exit 1
 }
+STAGE="$(./scripts/release.py field stage)"
 PREFIX="${ISO_NAME%.iso}"
 FILES=(
   README.md
@@ -84,6 +98,9 @@ FILES=(
   "$PREFIX.spdx.json"
   "$PREFIX.verified"
 )
+if [ "$STAGE" != alpha ]; then
+  FILES+=("$PREFIX.iso.sha256.asc")
+fi
 for file in "${FILES[@]}"; do
   [ -s "$ARTIFACT_DIR/$file" ] || {
     echo "ERRO: artefato ausente: $ARTIFACT_DIR/$file" >&2
@@ -93,6 +110,9 @@ done
 
 cd "$ARTIFACT_DIR"
 sha256sum -c "$PREFIX.iso.sha256"
+if [ "$STAGE" != alpha ]; then
+  verify_release_signature "$PREFIX.iso.sha256.asc" "$PREFIX.iso.sha256"
+fi
 # Baseline: obs-repositories, live-session, installer, first-boot,
 # uefi-secure-boot, rollback and hardware-matrix. Stage-aware additions are
 # read from the same policy used to create the evidence manifest.
@@ -149,10 +169,14 @@ if decision_path:
 PY
 
 if [ "$CHECK_OPEN_BLOCKERS" -eq 1 ]; then
-  OPEN_BLOCKERS="$(gh issue list --state open --label desktop --limit 200 \
+  # The script runs from the artifact directory, outside the repository; name
+  # the repository explicitly so gh does not depend on the working tree.
+  LABEL_ARGS=()
+  [ -z "$BLOCKER_LABEL" ] || LABEL_ARGS=(--label "$BLOCKER_LABEL")
+  OPEN_BLOCKERS="$(gh issue list -R "$ISSUE_REPOSITORY" --state open "${LABEL_ARGS[@]}" --limit 200 \
     --json number,title --jq '.[] | select(.title | test("\\[P[01]\\]"; "i")) | "#\\(.number) \\(.title)"')"
   [ -z "$OPEN_BLOCKERS" ] || {
-    echo "ERRO: há P0/P1 Desktop aberta; publicação bloqueada:" >&2
+    echo "ERRO: há P0/P1 aberta em $ISSUE_REPOSITORY; publicação bloqueada:" >&2
     echo "$OPEN_BLOCKERS" >&2
     exit 1
   }
@@ -191,4 +215,10 @@ curl --fail --location --retry 5 \
   --output "$DOWNLOAD_DIR/$PREFIX.iso" \
   "$DOWNLOAD_URL/$PREFIX.iso"
 (cd "$DOWNLOAD_DIR" && sha256sum -c "$PREFIX.iso.sha256")
+if [ "$STAGE" != alpha ]; then
+  curl --fail --location --retry 5 \
+    --output "$DOWNLOAD_DIR/$PREFIX.iso.sha256.asc" \
+    "$DOWNLOAD_URL/$PREFIX.iso.sha256.asc"
+  verify_release_signature "$DOWNLOAD_DIR/$PREFIX.iso.sha256.asc" "$DOWNLOAD_DIR/$PREFIX.iso.sha256"
+fi
 echo "Publicação $RELEASE_LABEL verificada após novo download."

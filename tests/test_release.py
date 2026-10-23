@@ -163,10 +163,12 @@ class RepositoryMetadataTests(unittest.TestCase):
             self.assertIn(evidence, uploader)
         self.assertIn('LYRA_RELEASE_SLUG:-alpha6', uploader)
         self.assertIn("--decision-file", uploader)
-        self.assertNotIn("iso.sha256.asc", uploader)
+        # The Alpha 6 flow stays unsigned (ADR 0005): the shared uploader only
+        # ships and verifies the detached signature for later stages.
+        self.assertIn('if [ "$STAGE" != alpha ]', uploader)
+        self.assertIn("verify_release_signature", uploader)
 
     def test_alpha7_release_uses_leap_16_1_and_preserves_full_evidence_gate(self) -> None:
-        self.assertEqual(Release.from_file().version_id, "16.1-alpha.7")
         wrapper = (ROOT / "scripts/build-desktop-alpha7.sh").read_text(
             encoding="utf-8"
         )
@@ -229,6 +231,42 @@ class RepositoryMetadataTests(unittest.TestCase):
         self.assertNotIn(
             "--published-vega-qt) USE_LOCAL_INSTALLER=0", helper
         )
+
+    def test_rc1_wrappers_sign_the_bundle_and_target_16_1_rc_1(self) -> None:
+        release = Release.from_file()
+        self.assertEqual(release.version_id, "16.1-rc.1")
+        self.assertEqual(release.stage_label, "RC 1")
+        wrapper = (ROOT / "scripts/build-kde-rc1.sh").read_text(encoding="utf-8")
+        uploader_wrapper = (ROOT / "scripts/upload-kde-rc1-sourceforge.sh").read_text(encoding="utf-8")
+        builder = (ROOT / "scripts/build-desktop-alpha6.sh").read_text(encoding="utf-8")
+        uploader = (ROOT / "scripts/upload-desktop-alpha6-sourceforge.sh").read_text(encoding="utf-8")
+        self.assertIn('LYRA_EXPECTED_VERSION="16.1-rc.1"', wrapper)
+        self.assertIn('LYRA_RELEASE_LABEL="KDE RC 1"', wrapper)
+        self.assertIn("build-desktop-alpha6.sh", wrapper)
+        self.assertIn('LYRA_EXPECTED_VERSION="16.1-rc.1"', uploader_wrapper)
+        self.assertIn('LYRA_RELEASE_SLUG="rc1"', uploader_wrapper)
+        self.assertIn('LYRA_RELEASE_EDITION="kde"', uploader_wrapper)
+        self.assertIn('LYRA_RELEASE_LAYOUT="release-first"', uploader_wrapper)
+        self.assertIn('LYRA_ISSUE_REPOSITORY="lyra-os-linux/lyraos-desktop-kde"', uploader_wrapper)
+        self.assertNotIn("LYRA_CHECK_OPEN_BLOCKERS", uploader_wrapper)
+        self.assertNotIn("LYRA_REQUIRE_DECISION", uploader_wrapper)
+        self.assertNotIn("LYRA_VERIFY_DOWNLOAD", uploader_wrapper)
+        self.assertIn("upload-desktop-alpha6-sourceforge.sh", uploader_wrapper)
+        fingerprint = "01B63EEDBE6B079126A0116EFA7353A131ECEFEB"
+        for script in (builder, uploader):
+            self.assertIn(fingerprint, script)
+            self.assertIn("VALIDSIG", script)
+            self.assertIn("verify_release_signature", script)
+            self.assertIn('if [ "$STAGE" != alpha ]', script)
+        self.assertIn('--local-user "$RELEASE_SIGNING_FINGERPRINT" --detach-sign --armor', builder)
+        self.assertIn('"$PREFIX.iso.sha256.asc"', uploader)
+        self.assertIn('gh issue list -R "$ISSUE_REPOSITORY"', uploader)
+        notes = (ROOT / "docs/releases/lyra-os-desktop-16.1-rc.1.md").read_text(encoding="utf-8")
+        self.assertIn("16.1-rc.1", notes)
+        self.assertIn("01B6 3EED", notes)
+        gate = (ROOT / "docs/release-gate.md").read_text(encoding="utf-8")
+        self.assertIn("## RC 1 changes", gate)
+        self.assertIn("RC 1", (ROOT / "README.md").read_text(encoding="utf-8"))
 
     def test_alpha8_wrapper_uses_the_stage_aware_release_gate(self) -> None:
         wrapper = (ROOT / "scripts/build-desktop-alpha8.sh").read_text(encoding="utf-8")

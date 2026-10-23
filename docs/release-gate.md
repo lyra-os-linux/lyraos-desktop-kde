@@ -58,6 +58,38 @@ content and hardware coverage; a bare green status is rejected:
 - [ ] `v1.0-alpha.6` remains available as the immutable Leap 16.0 rollback
   baseline and the 16.0 → 16.1 upgrade/rollback rehearsal is recorded.
 
+## RC 1 changes
+
+By maintainer decision on 2026-10-23 (ADR 0017 in `lyraos-desktop`) the KDE Plasma
+edition moves from Alpha 7 straight to RC 1 (`16.1-rc.1`), with no Beta and no
+release date: it is published only when this gate passes. The only package
+change since Alpha 7 is the Vega update; RC 1 starts the strict freeze, so
+only bug, crash, security and critical performance fixes to packages already
+shipped are accepted.
+
+RC 1 uses the same gate as the Desktop GNOME RC 1. The four Alpha 8 additions
+below are replaced by the plan approved for GNOME on 2026-10-07
+(lyraos-desktop#28): new installations only, qualified in virtual machines.
+
+- [ ] required results: `obs-repositories`, `live-session`, `installer`,
+  `first-boot`, `uefi-secure-boot`, `rollback` and `i18n` (`en-US`, `pt-BR`
+  and `es-ES`, with `en-US` as the explicit fallback), repeated in full on the
+  exact ISO over openSUSE Leap 16.1;
+- [ ] not required: `hardware-matrix` (VM-only qualification) and
+  `upgrade-rehearsal` (upgrading an Alpha 7 installation is not supported);
+  ECA Digital scope and the feature freeze are declared in the release notes;
+- [ ] the bundle carries `*.iso.sha256.asc`, a detached signature of the
+  checksum by the official release key `01B63EEDBE6B079126A0116EFA7353A131ECEFEB`;
+  `scripts/build-kde-rc1.sh` signs it and
+  `scripts/upload-kde-rc1-sourceforge.sh` verifies it before and after
+  upload (ADR 0005);
+- [ ] `obs-repositories` comes from `scripts/obs-release.py health` with the
+  `vega` baseline aligned to the Desktop GNOME RC 1;
+- [ ] publication is blocked while any open issue in `lyraos-desktop-kde` is titled
+  `[P0]` or `[P1]`;
+- [ ] a non-trivial defect found during the gate stops the promotion and
+  produces RC 2; criteria are never relaxed.
+
 ## Alpha 8 additions
 
 - [ ] `upgrade-rehearsal`: a published baseline consumes a signed successor
