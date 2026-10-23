@@ -186,6 +186,30 @@
       "rationale": "GTK catalog implementation exists for all three locales."
     },
     {
+      "id": "vega-qt",
+      "project": "vega",
+      "display_name": "Vega Qt",
+      "wave": "alpha7",
+      "status": "scheduled",
+      "format": "Qt Linguist",
+      "domain": "vega-qt",
+      "selection": "QLocale with English fallback",
+      "lint": "Qt translation catalog validation",
+      "rationale": "The KDE frontend still hard-codes Portuguese strings and ships no translation catalogs; en-US, pt-BR and es-ES remain pending before the KDE RC can pass the i18n gate."
+    },
+    {
+      "id": "vega-xfce",
+      "project": "vega",
+      "display_name": "Vega XFCE",
+      "wave": "alpha7",
+      "status": "complete",
+      "format": "gettext",
+      "domain": "vega-gtk",
+      "selection": "LC_ALL/LC_MESSAGES/LANG and AccountsService",
+      "lint": "cargo test --workspace --locked",
+      "rationale": "Shared vega OBS package; the XFCE frontend ships en-US, pt-BR and es-ES gettext catalogs. Not selected by the KDE recipe."
+    },
+    {
       "id": "vega-web",
       "project": "vega",
       "wave": "alpha5",

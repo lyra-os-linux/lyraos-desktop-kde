@@ -40,17 +40,32 @@ sheliak = "66386901d478e307ace8bca0ecbcd6ad"
 sulafat = "99dcea79a5e7490a6f40fc78f9f1eccb"
 
 [baseline.projects.vega]
-vega-cli = "0399bf5a9f143e3ad42d2e1223e97752"
+# 2026-10-13/14 reconciliation (NVIDIA 615.71.09 requalification cycle):
+# vegad 5.1.34-5.1.36 (r90-r92), vega-gtk 5.1.47 (r117), vega-cli 5.1.24 (r74)
+# and vega-web 5.1.24 (r41) were committed directly to release. The exact
+# sources were copied to staging on 2026-10-14 (vegad r15, vega-gtk r33,
+# vega-cli r9, vega-web r9), every build succeeded on openSUSE_Leap_16.1 and
+# `obs-release.py check --channel staging` passed for all three staging
+# projects. OBS refused the four submit requests ("The request contains no
+# actions") because release already carried byte-identical content, exactly
+# as with vega-gtk 5.1.25 below. The release srcmd5 values are pinned here
+# with that evidence, by maintainer decision on 2026-10-14. Subsequent
+# changes require accepted staging. The pinned values are the published
+# sourceinfo srcmd5 that the health check compares (service-expanded), not
+# the raw history srcmd5: vega-cli history 78375ad0baf91277aec167dfe307848e,
+# vega-gtk 9d672c20adef7eeb9cc9076075f5639b, vega-web
+# cda1fa63a4847971e29c5eff173c1274, vegad f2759cb38d53f4fb02a16b0ae31dd5be.
+vega-cli = "e255465b590cb0342b0c2f0e815e21dc"
 # Vega GTK 5.1.25 was initially committed directly to release. The exact
 # payload was reconstructed in staging rev 5, built and published with all
 # three staging channels green on 2026-08-24. Release srcmd5
 # c1d62cde18baf8bd50211cf30676eeb7 and staging srcmd5
 # 4837cc6fe9bb484b17fb1cbb045f386e both resolve to verifymd5
 # 51e56856a01c9d451cba9420d4ec82a5; OBS rejected the submit request because
-# it contained no source changes. Subsequent changes require accepted staging.
-vega-gtk = "c1d62cde18baf8bd50211cf30676eeb7"
-vega-web = "ae93ad319ee2b154b8da878d6f7b9f30"
-vegad = "8b25259ad1aed3a0c03fbbf22160a636"
+# it contained no source changes. Superseded by the 5.1.47 pin above.
+vega-gtk = "23bf96bf5759be4b53f927c287443781"
+vega-web = "99d7e61436e87d6155b4bdb8396a8ca2"
+vegad = "ab2b533d6fa21dbdddf301898306113e"
 
 [baseline.projects.fina]
 fina = "98285bd5aa903f7c31d85f6f90a782f7"
@@ -100,7 +115,7 @@ id = "vega"
 release = "home:rodrigosbrito:vega"
 staging = "home:rodrigosbrito:vega:staging"
 iso_consumer = true
-packages = ["vega-cli", "vega-gtk", "vega-web", "vegad"]
+packages = ["vega-cli", "vega-gtk", "vega-qt", "vega-web", "vega-xfce", "vegad"]
 
 [[projects.targets]]
 name = "openSUSE_Leap_16.1"
