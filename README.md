@@ -1,9 +1,11 @@
 # Lyra OS — edição KDE Plasma
 
 > [!IMPORTANT]
-> O KDE Plasma é uma edição oficial do Lyra OS. Este repositório preserva parte do
-> histórico da edição GNOME usada como base, mas mantém imagem, integração e
-> gates de qualidade próprios para o Plasma.
+> A edição KDE Plasma foi retomada e vai direto da Alpha 7 para a **16.1 RC 1**,
+> sem Beta. Ela será lançada **quando estiver pronta, sem data definida**,
+> depois de passar pelos mesmos gates da RC do GNOME. O lançamento do
+> [GNOME](https://github.com/lyra-os-linux/lyraos-desktop) 16.1 segue seu
+> próprio cronograma e não espera por esta edição.
 
 Lyra OS é uma distribuição Linux desktop baseada no openSUSE Leap 16.1,
 voltada a uma experiência KDE Plasma simples, estável e integrada ao ecossistema
@@ -12,9 +14,9 @@ o instalador da edição **Odisseia 16.1 Alpha 7** para computadores x86_64.
 
 O projeto mantém também as edições
 [GNOME](https://github.com/lyra-os-linux/lyraos-desktop) e
-[XFCE](https://github.com/lyra-os-linux/lyraos-desktop-xfce). O ciclo atual
-prioriza a estabilização das três edições até **28 de setembro de 2026**;
-o acompanhamento do Plasma está na [issue #1](https://github.com/lyra-os-linux/lyraos-desktop-kde/issues/1).
+[XFCE](https://github.com/lyra-os-linux/lyraos-desktop-xfce). A próxima candidata desta edição
+é a 16.1 RC 1; o acompanhamento do Plasma está na
+[issue #1](https://github.com/lyra-os-linux/lyraos-desktop-kde/issues/1).
 
 ## ECA Digital
 
@@ -72,11 +74,15 @@ decisões de implementação, limitações e verificações já realizadas.
 
 ## Ciclo atual e próximos ciclos
 
-A estabilização conjunta de GNOME, KDE Plasma e XFCE segue até 28 de setembro
-de 2026. A versão 1.1 terá o Lyra Installer em `en-US`, `pt-BR` e `es-ES`,
-com inglês como padrão e fallback. Os demais pacotes próprios continuam com
-o gate integral em `en-US`/`pt-BR`; sua ampliação fica para uma release futura. O cronograma e os
-gates estão registrados no [roadmap do projeto](docs/roadmap.md).
+O GNOME 16.1 é lançado de forma independente. A estabilização conjunta das
+três edições, que estava prevista até 28 de setembro de 2026, foi substituída
+por ciclos próprios: o Plasma vai direto da Alpha 7 para a RC 1, e a única
+mudança de pacotes é atualizar o Vega. A partir da RC 1 vale o congelamento
+estrito, e o lançamento acontece quando todos os gates passarem, sem data fixa. O Lyra Installer
+continua planejado em `en-US`, `pt-BR` e `es-ES`, com inglês
+como padrão e fallback. Os demais pacotes próprios continuam com o gate
+integral em `en-US`/`pt-BR`; sua ampliação fica para uma release futura. O
+cronograma e os gates estão registrados no [roadmap do projeto](docs/roadmap.md).
 
 ## Preparando o ambiente
 
