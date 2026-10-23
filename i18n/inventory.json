@@ -190,12 +190,12 @@
       "project": "vega",
       "display_name": "Vega Qt",
       "wave": "alpha7",
-      "status": "scheduled",
+      "status": "complete",
       "format": "Qt Linguist",
       "domain": "vega-qt",
-      "selection": "QLocale with English fallback",
-      "lint": "Qt translation catalog validation",
-      "rationale": "The KDE frontend still hard-codes Portuguese strings and ships no translation catalogs; en-US, pt-BR and es-ES remain pending before the KDE RC can pass the i18n gate."
+      "selection": "QLocale UI languages; pt* uses pt-BR, es* uses es-ES, English fallback",
+      "lint": "scripts/check-translations.sh",
+      "rationale": "Vega Qt 0.1.7 ships English source strings with pt-BR and es-ES Qt Linguist catalogs embedded in vega-qt and the update notifier (lyra-os-linux/vega-qt#7)."
     },
     {
       "id": "vega-xfce",
