@@ -2,8 +2,8 @@
 version = "16.1"
 base_distribution = "opensuse-leap"
 base_version = "16.1"
-stage = "alpha"
-iteration = 7
+stage = "rc"
+iteration = 1
 codename = "Odisseia"
 codename_id = "odisseia"
 image_name = "LyraOS-Desktop-KDE"

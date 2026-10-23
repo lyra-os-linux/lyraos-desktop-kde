@@ -14,6 +14,16 @@ EXPECTED_VERSION="${LYRA_EXPECTED_VERSION:-1.0-alpha.6}"
 RELEASE_LABEL="${LYRA_RELEASE_LABEL:-Desktop Alpha 6}"
 COMMAND_NAME="${LYRA_COMMAND_NAME:-$0}"
 RELEASE_NOTES="${LYRA_RELEASE_NOTES:-$REPO_ROOT/docs/releases/lyra-os-desktop-$EXPECTED_VERSION.md}"
+RELEASE_SIGNING_FINGERPRINT="01B63EEDBE6B079126A0116EFA7353A131ECEFEB"
+verify_release_signature() {
+  local signature="$1" signed_file="$2" valid_fingerprint
+  valid_fingerprint="$(gpg --batch --status-fd 1 --verify "$signature" "$signed_file" 2>/dev/null \
+    | awk '$1 == "[GNUPG:]" && $2 == "VALIDSIG" { print $3 }')"
+  [ "$valid_fingerprint" = "$RELEASE_SIGNING_FINGERPRINT" ] || {
+    echo "ERRO: assinatura não pertence à chave oficial $RELEASE_SIGNING_FINGERPRINT." >&2
+    exit 1
+  }
+}
 
 usage() {
   cat <<EOF
@@ -24,6 +34,7 @@ publicado do instalador (o Welcome já vem sempre do RPM publicado).
 --artifacts-only reutiliza a ISO atual.
 Quando --evidence-dir é informado, o manifesto final exige todas as evidências
 aplicáveis ao estágio declarado em release.toml.
+Defina LYRA_PRIVILEGE_TOOL=pkexec para autenticar o build pelo diálogo gráfico.
 EOF
 }
 
@@ -46,6 +57,7 @@ cd "$REPO_ROOT"
 
 VERSION="$(./scripts/release.py field version_id)"
 ISO_NAME="$(./scripts/release.py field iso_filename)"
+STAGE="$(./scripts/release.py field stage)"
 PREFIX="${ISO_NAME%.iso}"
 [ "$VERSION" = "$EXPECTED_VERSION" ] || {
   echo "ERRO: release.toml não aponta para $EXPECTED_VERSION." >&2
@@ -61,7 +73,14 @@ mkdir -p "$WORK_DIR/evidence"
   --output "$WORK_DIR/evidence/obs-repositories-result.json"
 
 if [ "$ARTIFACTS_ONLY" -eq 0 ]; then
-  sudo -v
+  case "${LYRA_PRIVILEGE_TOOL:-sudo}" in
+    sudo) sudo -v ;;
+    pkexec) command -v pkexec >/dev/null || {
+      echo "ERRO: pkexec não está disponível." >&2
+      exit 1
+    } ;;
+    *) echo "ERRO: LYRA_PRIVILEGE_TOOL deve ser sudo ou pkexec." >&2; exit 1 ;;
+  esac
   ./kiwi/test/build-and-run-vm.sh --build-only \
     --published-installer
 fi
@@ -113,6 +132,15 @@ install -m 0644 "$VERIFIED_SOURCE" "$ARTIFACT_DIR/$PREFIX.verified"
 install -m 0644 \
   "$RELEASE_NOTES" \
   "$ARTIFACT_DIR/README.md"
+if [ "$STAGE" != alpha ]; then
+  # Beta, RC and final bundles carry a detached signature of the checksum by
+  # the official release key (ADR 0005); image-build.py refuses the evidence
+  # manifest without it.
+  rm -f "$ARTIFACT_DIR/$PREFIX.iso.sha256.asc"
+  gpg --batch --local-user "$RELEASE_SIGNING_FINGERPRINT" --detach-sign --armor \
+    --output "$ARTIFACT_DIR/$PREFIX.iso.sha256.asc" "$ARTIFACT_DIR/$PREFIX.iso.sha256"
+  verify_release_signature "$ARTIFACT_DIR/$PREFIX.iso.sha256.asc" "$ARTIFACT_DIR/$PREFIX.iso.sha256"
+fi
 (cd "$ARTIFACT_DIR" && sha256sum -c "$PREFIX.iso.sha256")
 
 if [ -n "$EVIDENCE_DIR" ]; then
@@ -134,4 +162,8 @@ else
   echo "Execute novamente com --artifacts-only --evidence-dir após concluir o gate."
 fi
 
-echo "$RELEASE_LABEL usa SHA-256 sem assinatura GPG destacada conforme a ADR 0005."
+if [ "$STAGE" = alpha ]; then
+  echo "$RELEASE_LABEL usa SHA-256 sem assinatura GPG destacada conforme a ADR 0005."
+else
+  echo "$RELEASE_LABEL: checksum assinado pela chave oficial $RELEASE_SIGNING_FINGERPRINT (ADR 0005)."
+fi
